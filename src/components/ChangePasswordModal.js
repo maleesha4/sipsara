@@ -1,0 +1,153 @@
+// ============================================
+// FILE: src/components/ChangePasswordModal.js
+// ============================================
+'use client';
+
+import { useState } from 'react';
+
+export default function ChangePasswordModal({ isOpen, onClose, user }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleChangePassword = async () => {
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setError('New password must be different from current password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to change password');
+      }
+
+      setSuccess('Password changed successfully!');
+      setTimeout(() => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        onClose();
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
+        <h2 className="text-2xl font-bold mb-4">Change Password</h2>
+
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4 text-red-800 text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4 text-green-800 text-sm">
+            {success}
+          </div>
+        )}
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Current Password
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Enter current password"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition disabled:opacity-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleChangePassword}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
+          >
+            {loading ? 'Updating...' : 'Change Password'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

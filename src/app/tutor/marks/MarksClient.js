@@ -1,16 +1,17 @@
 // ============================================
-// FILE: app/tutor/marks/MarksClient.js
+// FILE: src/app/tutor/marks/MarksClient.js
 // ============================================
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';  // Removed useSearchParams()—using prop now
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 
-export default function MarksClient({ searchParams }) {  // Receive as prop from page
+export default function MarksClient() {
   const router = useRouter();
-  const examId = searchParams?.examId;  // Safe access; falls back to null
+  const searchParams = useSearchParams();
+  const examId = searchParams.get('examId');
   const [choices, setChoices] = useState([]);  // List of {choice_id, student_name, admission_number, subject_name, score, marked_at}
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -25,7 +26,7 @@ export default function MarksClient({ searchParams }) {  // Receive as prop from
     } else {
       fetchAvailableExams();
     }
-  }, [examId]);  // Still depends on examId
+  }, [examId]);
 
   const fetchUser = async () => {
     try {
@@ -138,6 +139,17 @@ export default function MarksClient({ searchParams }) {  // Receive as prop from
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Navbar user={user} />
+        <div className="container mx-auto px-4 py-8 text-center">
+          <p>Loading marks...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If no exam selected and no available exams, show message
   if (!examId && availableExams.length === 0) {
     return (
@@ -181,18 +193,6 @@ export default function MarksClient({ searchParams }) {  // Receive as prop from
           <Link href="/tutor/dashboard" className="mt-4 inline-block bg-gray-500 text-white px-4 py-2 rounded">
             Back to Dashboard
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Moved loading check after conditional renders (avoids flash)
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <Navbar user={user} />
-        <div className="container mx-auto px-4 py-8 text-center">
-          <p>Loading marks...</p>
         </div>
       </div>
     );
