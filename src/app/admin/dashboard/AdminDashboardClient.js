@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Navbar from '../../../components/Navbar'; // Adjust path as needed
 import Link from 'next/link';
+import ChangePasswordModal from '../../../components/ChangePasswordModal';
 
 export default function AdminDashboardClient() {
   const searchParams = useSearchParams();
@@ -24,6 +25,7 @@ export default function AdminDashboardClient() {
   const [recentExams, setRecentExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const successMessage = searchParams.get('success');
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function AdminDashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       <Navbar user={user} />
       
       {/* Success Notification */}
@@ -131,7 +133,7 @@ export default function AdminDashboardClient() {
         </div>
       )}
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 flex-grow">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
 
         {/* Stats Cards */}
@@ -240,6 +242,27 @@ export default function AdminDashboardClient() {
           )}
         </div>
       </div>
+
+      {/* Change Password Button - Footer */}
+      <div className="bg-white border-t border-gray-300 p-4">
+        <div className="container mx-auto flex justify-end">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition font-semibold flex items-center gap-2 text-sm"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Change Password
+          </button>
+        </div>
+      </div>
+
+      <ChangePasswordModal 
+        isOpen={showPasswordModal} 
+        onClose={() => setShowPasswordModal(false)}
+        user={user}
+      />
     </div>
   );
 }

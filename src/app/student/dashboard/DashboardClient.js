@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
+import ChangePasswordModal from '../../../components/ChangePasswordModal';
 
 export default function DashboardClient() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     // Check for success message from query params
@@ -29,7 +31,6 @@ export default function DashboardClient() {
       if (admission) {
         setAdmissionNumber(admission);
       }
-      // Clear the query params
       router.replace('/student/dashboard');
     }
 
@@ -108,7 +109,7 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white-700 to-gray-300">
+    <div className="min-h-screen bg-gradient-to-br from-white-700 to-gray-300 flex flex-col">
       <Navbar user={user} />
       
       {/* Success Notification */}
@@ -166,7 +167,7 @@ export default function DashboardClient() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 flex-grow">
         <h1 className="text-3xl font-bold mb-6">Student Dashboard</h1>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -186,7 +187,7 @@ export default function DashboardClient() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">Available Exams</h2>
             {exams.length === 0 ? (
@@ -256,6 +257,24 @@ export default function DashboardClient() {
           </div>
         </div>
       </div>
+
+      {/* Change Password Button - Footer */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <div className="container mx-auto flex justify-end">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition text-sm font-semibold"
+          >
+            🔒 Change Password
+          </button>
+        </div>
+      </div>
+
+      <ChangePasswordModal 
+        isOpen={showPasswordModal} 
+        onClose={() => setShowPasswordModal(false)}
+        user={user}
+      />
     </div>
   );
 }

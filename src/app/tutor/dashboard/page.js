@@ -3,11 +3,14 @@
 // ============================================
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
+import ChangePasswordModal from '../../../components/ChangePasswordModal';
 
-export default function TutorDashboardClient() {
+export default function AdminDashboard() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
     mySubjects: [],        // array of {id, name}
@@ -17,6 +20,7 @@ export default function TutorDashboardClient() {
   });
   const [recentExams, setRecentExams] = useState([]);  // array of {id, exam_name, date, student_count_per_subject}
   const [loading, setLoading] = useState(true);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -26,6 +30,10 @@ export default function TutorDashboardClient() {
     try {
       // Fetch logged-in user
       const userRes = await fetch('/api/auth/me');
+      if (!userRes.ok) {
+        router.push('/login');
+        return;
+      }
       const userData = await userRes.json();
       setUser(userData.user);
 
@@ -56,12 +64,20 @@ export default function TutorDashboardClient() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Navbar />
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <p>Access denied</p>
+      </div>
+    );
+  }
 
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Tutor Dashboard</h1>
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <Navbar user={user} />
+      
+      <div className="container mx-auto px-4 py-8 flex-grow">
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -168,6 +184,24 @@ export default function TutorDashboardClient() {
           )}
         </div>
       </div>
+
+      {/* Change Password Button - Footer */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <div className="container mx-auto flex justify-end">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition text-sm font-semibold"
+          >
+            🔒 Change Password
+          </button>
+        </div>
+      </div>
+
+      <ChangePasswordModal 
+        isOpen={showPasswordModal} 
+        onClose={() => setShowPasswordModal(false)}
+        user={user}
+      />
     </div>
   );
 }
