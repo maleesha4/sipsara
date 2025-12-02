@@ -1,8 +1,8 @@
 // app/api/tutor/enrollments/available/route.js (fixed to use tutor_id)
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyToken } from '../../../lib/auth';
-import { query } from '../../../lib/database';
+import { verifyToken } from '../../../../../lib/auth';
+import { query } from '../../../../../lib/database';
 
 export async function GET(req) {
   try {

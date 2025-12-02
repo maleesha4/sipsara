@@ -1,8 +1,8 @@
 // app/api/tutor/enrollments/[id]/route.js (fixed import paths)
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyToken } from '../../../lib/auth';
-import { query } from '../../../lib/database';
+import { verifyToken } from '../../../../../lib/auth';
+import { query } from '../../../../../lib/database';
 
 export async function DELETE(req, { params }) {
   try {

@@ -1,9 +1,9 @@
 // app/api/admin/create_students/route.js
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyToken } from '../../../lib/auth';
-import { query } from '../../../lib/database';
-import { hashPassword } from '../../../../../../lib/auth';
+import { verifyToken } from '../../../../lib/auth';
+import { query } from '../../../../lib/database';
+import { hashPassword } from '../../../../lib/auth';
 
 export async function POST(req) {
   try {
