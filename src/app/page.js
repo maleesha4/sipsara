@@ -5,132 +5,90 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function Home() {
-  // image sets for each rectangle
-  const images1 = ["/img1.jpg", "/img2.jpg", "/img3.jpg"];
-  const images2 = ["/img4.jpg", "/img5.jpg", "/img6.jpg"];
-  const images3 = ["/img7.jpg", "/img8.jpg", "/img9.jpg"];
 
-  const [index1, setIndex1] = useState(0);
-  const [index2, setIndex2] = useState(0);
+  // Only third rectangle slides
+  const sliderImages = ["/img3.jpg", "/img4.jpg", "/img5.jpg"];
+
   const [index3, setIndex3] = useState(0);
 
   useEffect(() => {
-    const timer1 = setInterval(() => setIndex1((p) => (p + 1) % images1.length), 5000);
-    const timer2 = setInterval(() => setIndex2((p) => (p + 1) % images2.length), 5000);
-    const timer3 = setInterval(() => setIndex3((p) => (p + 1) % images3.length), 5000);
+    const timer = setInterval(() => {
+      setIndex3((p) => (p + 1) % sliderImages.length);
+    }, 5000);
 
-    return () => {
-      clearInterval(timer1);
-      clearInterval(timer2);
-      clearInterval(timer3);
-    };
+    return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white-700 to-blue-500"> {/* Logo */} <div className="mb-4"> <Image src="/logo.png" alt="Institute Logo" width={120} height={120} /> </div>
+    <div className="min-h-screen bg-gradient-to-br from-white-700 to-blue-500">
+
+      {/* Logo */}
+      <div className="mb-4">
+        <Image src="/logo.png" alt="Institute Logo" width={120} height={120} className="w-20 sm:w-[120px] h-auto" />
+      </div>
+
       <div className="flex flex-col items-center mt-2">
-        <Image src="/sipsara.png" alt="සිප්සර" width={300} height={80} />
-        <br />
-        <h1 className="text-3xl font-bold">අධ්‍යාපන ආයතනය</h1>
+        <Image src="/sipsara.png" alt="සිප්සර" width={300} height={80} className="w-48 sm:w-[300px]" />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 w-full px-4 max-w-8xl mx-auto">
+        <h1 className="text-2xl sm:text-4xl font-bold">අධ්‍යාපන ආයතනය</h1>
 
+        {/* 3 Rectangles */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-8 w-full px-4 max-w-8xl mx-auto">
 
-          {/* Rectangle 1 */}
-          <div className="w-full h-64 sm:h-64 lg:h-80 bg-gray-200 rounded-lg overflow-hidden shadow-lg">
+          {/* Rectangle 1 - FIXED */}
+          <div className="w-full aspect-[16/9] bg-gray-200 rounded-lg overflow-hidden shadow-lg">
             <Image
-              src={images1[index1]}
-              alt="Slider 1"
-              // width/height define intrinsic aspect - CSS will size to container
+              src="/img1.jpg"
+              alt="Image 1"
               width={800}
-              height={800}
+              height={450}
               className="w-full h-full object-cover transition-all duration-700"
             />
           </div>
 
-          {/* Rectangle 2 */}
-          <div className="w-full h-64 sm:h-64 lg:h-80 bg-gray-200 rounded-lg overflow-hidden shadow-lg">
+          {/* Rectangle 2 - FIXED */}
+          <div className="w-full aspect-[16/9] bg-gray-200 rounded-lg overflow-hidden shadow-lg">
             <Image
-              src={images2[index2]}
-              alt="Slider 2"
+              src="/img2.jpg"
+              alt="Image 2"
               width={800}
-              height={800}
+              height={450}
               className="w-full h-full object-cover transition-all duration-700"
             />
           </div>
 
-          {/* Rectangle 3
-              - On small screens: occupies full width of grid (col-span auto)
-              - On sm (>=640px): spans 2 columns (sm:col-span-2) and we make it taller (sm:h-96)
-              - On lg (>=1024px): back to single column span and normal height (lg:h-80)
-          */}
-          <div className="
-            w-full
-            h-64
-            bg-gray-200
-            rounded-lg
-            overflow-hidden
-            shadow-lg
-            sm:col-span-2
-            sm:h-96
-            lg:col-span-1
-            lg:h-80
-          ">
+          {/* Rectangle 3 - SLIDING */}
+          <div className="w-full aspect-[16/9] bg-gray-200 rounded-lg overflow-hidden shadow-lg col-span-2 lg:col-span-1">
             <Image
-              src={images3[index3]}
+              src={sliderImages[index3]}
               alt="Slider 3"
-              width={1200}
-              height={800}
+              width={1600}
+              height={900}
               className="w-full h-full object-cover transition-all duration-700"
             />
           </div>
+
         </div>
       </div>
 
       {/* Main container (login/register + info cards) */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8 sm:py-16">
         <div className="text-center text-white">
-          <h1 className="text-6xl font-bold mb-6">Sipsara Institute</h1>
-          <p className="text-2xl mb-8">The Institute of Knowledge</p>
-          <div className="flex space-x-10 mt-6 justify-center">
-            {/* LOGIN BUTTON */}
+          <h1 className="text-4xl sm:text-6xl font-bold mb-4 sm:mb-6">Sipsara Institute</h1>
+          <h2 className="text-2xl sm:text-3xl mb-6 sm:mb-8">The Institute of Knowledge</h2>
+
+          {/* Login & Register Buttons */}
+          <div className="flex flex-row space-x-6 mt-6 justify-center">
             <Link
               href="/login"
-              className="
-                px-20 py-8 
-                rounded-xl 
-                font-semibold text-3xl
-                bg-green-500
-                text-black
-                shadow-xl 
-                hover:shadow-2xl 
-                hover:scale-100 
-                hover:brightness-120
-                transition-all
-                duration-500
-                inline-block
-              "
+              className="px-16 py-6 rounded-xl font-semibold text-2xl bg-green-500 text-black shadow-xl hover:shadow-2xl hover:scale-100 hover:brightness-120 transition-all duration-500 inline-block"
             >
               Login
             </Link>
 
-            {/* REGISTER BUTTON */}
             <Link
               href="/register"
-              className="
-                px-20 py-8 
-                rounded-xl 
-                font-semibold text-3xl
-                bg-green-500
-                text-black
-                shadow-xl 
-                hover:shadow-2xl 
-                hover:scale-100 
-                hover:brightness-120
-                transition-all
-                duration-500
-                inline-block
-              "
+              className="px-16 py-6 rounded-xl font-semibold text-2xl bg-green-500 text-black shadow-xl hover:shadow-2xl hover:scale-100 hover:brightness-120 transition-all duration-500 inline-block"
             >
               Register
             </Link>
@@ -138,6 +96,7 @@ export default function Home() {
 
         </div>
 
+        {/* Info cards */}
         <div className="grid md:grid-cols-3 gap-8 mt-16">
           <div className="bg-white rounded-lg p-6 shadow-lg">
             <h3 className="text-xl font-bold text-blue-600 mb-3">For Students</h3>
@@ -169,6 +128,7 @@ export default function Home() {
             </ul>
           </div>
         </div>
+
       </div>
     </div>
   );
