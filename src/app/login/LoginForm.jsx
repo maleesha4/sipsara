@@ -22,7 +22,7 @@ function LoginContent() {
       .find(row => row.startsWith('auth_token='))
       ?.split('=')[1];
 
-    if (token) router.push('/student/dashboard');
+    if (token) window.location.href = '/student/dashboard'; // Full nav for consistency
     else setCheckingSession(false);
   }, [router]);
 
@@ -36,12 +36,25 @@ function LoginContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
 
-      if (data.user.role === 'admin') router.push('/admin/dashboard');
-      else if (data.user.role === 'tutor') router.push('/tutor/dashboard');
-      else router.push('/student/dashboard');
+      // Safe parse: Check if ok first, then text for debug if needed
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: `HTTP ${res.status}: ${errorText.substring(0, 100)}` };
+        }
+        throw new Error(errorData.error || 'Login failed');
+      }
+
+      const data = await res.json(); // Now safe—response is JSON
+
+      // Client-side full navigation (sends cookie)
+      if (data.user.role === 'admin') window.location.href = '/admin/dashboard';
+      else if (data.user.role === 'tutor') window.location.href = '/tutor/dashboard';
+      else window.location.href = '/student/dashboard';
     } catch (err) {
       setError(err.message);
     } finally {
