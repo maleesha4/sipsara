@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
-export default function Navbar() {
+export default function Navbar({ user: propUser }) {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(propUser);
   const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -17,11 +17,18 @@ export default function Navbar() {
   const [preview, setPreview] = useState(defaultAvatar);
   const [uploading, setUploading] = useState(false);
 
+  const getAuthHeaders = () => ({
+    ...(localStorage.getItem('auth_token') && { Authorization: `Bearer ${localStorage.getItem('auth_token')}` })
+  });
+
   // Fetch current user/profile on mount
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+        const res = await fetch("/api/auth/me", { 
+          headers: getAuthHeaders(),
+          credentials: "same-origin" 
+        });
         if (!res.ok) {
           setUser(null);
           return;
@@ -43,11 +50,16 @@ export default function Navbar() {
         setLoading(false);
       }
     }
-    loadProfile();
-  }, []);
+    if (!propUser) {
+      loadProfile();
+    } else {
+      setUser(propUser);
+      setLoading(false);
+    }
+  }, [propUser]);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    localStorage.removeItem('auth_token');
     setUser(null);
     router.push("/login");
   };
@@ -87,6 +99,7 @@ export default function Navbar() {
       const res = await fetch("/api/auth/upload-profile", {
         method: "POST",
         body: formData,
+        headers: getAuthHeaders(),
         credentials: "same-origin"
       });
 
