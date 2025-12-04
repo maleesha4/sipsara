@@ -1,16 +1,26 @@
-// middleware.js (at root)
+// middleware.js
 import { NextResponse } from 'next/server';
-import { verifyToken } from './src/lib/auth';  // Adjust path if not using src/
+import { verifyToken } from './src/lib/auth';
 
 export function middleware(request) {
   const token = request.cookies.get('auth_token')?.value;
   const pathname = request.nextUrl.pathname;
 
-  console.log(`[Middleware] Path: ${pathname}, Has token: ${!!token}`);  // Temp: Check if running
-
   // Public routes: Skip auth
   const publicRoutes = ['/', '/login', '/register'];
   if (publicRoutes.includes(pathname)) {
+    // If user is already authenticated and tries to access login/register, redirect to dashboard
+    if (token && (pathname === '/login' || pathname === '/register')) {
+      try {
+        const decoded = verifyToken(token);
+        if (decoded) {
+          const dashboardPath = `/${decoded.role}/dashboard`;
+          return NextResponse.redirect(new URL(dashboardPath, request.url));
+        }
+      } catch (err) {
+        // Invalid token, allow access to login/register
+      }
+    }
     return NextResponse.next();
   }
 
@@ -25,14 +35,12 @@ export function middleware(request) {
     prefix => pathname === prefix || pathname.startsWith(prefix + '/')
   );
 
-  // Not protected: Allow
   if (!protectedPrefix) {
     return NextResponse.next();
   }
 
   // No token: Redirect to login
   if (!token) {
-    console.log('[Middleware] No token - redirect to login');
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -41,36 +49,30 @@ export function middleware(request) {
   try {
     decoded = verifyToken(token);
     if (!decoded) {
-      console.log('[Middleware] Invalid token - redirect to login');
-      return NextResponse.redirect(new URL('/login', request.url));
+      // Clear invalid cookie
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.delete('auth_token');
+      return response;
     }
-    console.log(`[Middleware] Decoded role: ${decoded.role}`);  // Temp: Verify role
   } catch (error) {
     console.error('[Middleware] Token verification error:', error.message);
-    return NextResponse.redirect(new URL('/login', request.url));
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.delete('auth_token');
+    return response;
   }
 
   // Role check
   const requiredRole = roleRouteMap[protectedPrefix];
   if (decoded.role !== requiredRole) {
-    console.log(`[Middleware] Role mismatch: '${decoded.role}' != '${requiredRole}' - blocking access`);
-    // Option 1: Redirect to login (your current)
     return NextResponse.redirect(new URL('/login', request.url));
-    
-    // Option 2: 403 Forbidden (more secure - prevents fishing)
-    // return new NextResponse('Unauthorized: Access denied', { status: 403 });
   }
 
-  // Success: Proceed, no cache
-  const response = NextResponse.next({
-    headers: { 'Cache-Control': 'no-store, no-cache' }
-  });
-  return response;
+  // Success: Proceed
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',  // Broader matcher: All non-static paths
-    // Or keep original: '/admin/:path*', '/student/:path*', '/tutor/:path*'
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|_next).*)',
   ],
 };
