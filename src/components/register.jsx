@@ -1,6 +1,6 @@
 // app/login/LoginForm.jsx
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,58 +14,30 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
 
-  useEffect(() => {
-    // Check authentication via API call instead of reading cookies directly
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me', {
-          method: 'GET',
-          credentials: 'same-origin', // Important: Include cookies
-        });
-
-        if (res.ok) {
-          // User is already logged in
-          const data = await res.json();
-          const user = data.user;
-          
-          // Redirect based on role
-          if (user.role === 'admin') {
-            router.push('/admin/dashboard');
-          } else if (user.role === 'tutor') {
-            router.push('/tutor/dashboard');
-          } else {
-            router.push('/student/dashboard');
-          }
-        } else {
-          // Not authenticated - show login form
-          setCheckingSession(false);
-        }
-      } catch (err) {
-        console.error('Auth check failed:', err);
-        setCheckingSession(false);
-      }
-    };
-
-    checkAuth();
-  }, [router]);
+  // REMOVED: Session checking that was causing the loop
+  // Let middleware handle redirects for authenticated users
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     
+    console.log('[LOGIN FORM] Submitting login');
+    
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin', // Important: Include cookies
+        credentials: 'include', // IMPORTANT: Include cookies
         body: JSON.stringify(formData),
       });
 
+      console.log('[LOGIN FORM] Response status:', res.status);
+
       if (!res.ok) {
         const errorText = await res.text();
+        console.error('[LOGIN FORM] Error response:', errorText);
         let errorData;
         try {
           errorData = JSON.parse(errorText);
@@ -76,32 +48,22 @@ function LoginContent() {
       }
 
       const data = await res.json();
+      console.log('[LOGIN FORM] Login successful, role:', data.user.role);
 
-      // Use router.push instead of window.location.href for better Next.js integration
-      if (data.user.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else if (data.user.role === 'tutor') {
-        router.push('/tutor/dashboard');
-      } else {
-        router.push('/student/dashboard');
-      }
+      // Wait a moment for cookie to be set, then redirect
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use router.push for client-side navigation
+      const dashboardPath = `/${data.user.role}/dashboard`;
+      console.log('[LOGIN FORM] Redirecting to:', dashboardPath);
+      router.push(dashboardPath);
+      
     } catch (err) {
+      console.error('[LOGIN FORM] Error:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
-
-  if (checkingSession) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking login status...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4">
@@ -115,6 +77,12 @@ function LoginContent() {
         {searchParams.get('registered') && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
             Registration successful! Please login.
+          </div>
+        )}
+
+        {searchParams.get('error') === 'unauthorized' && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Please login to continue.
           </div>
         )}
 
@@ -134,6 +102,7 @@ function LoginContent() {
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              disabled={loading}
             />
           </div>
 
@@ -147,11 +116,13 @@ function LoginContent() {
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-2 text-gray-600"
+                disabled={loading}
               >
                 {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
               </button>
@@ -162,14 +133,14 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-1/2 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
+              className="w-1/2 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
 
             <Link
               href="/"
-              className="w-1/2 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold text-center hover:bg-gray-400"
+              className={`w-1/2 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold text-center hover:bg-gray-400 ${loading ? 'pointer-events-none opacity-50' : ''}`}
             >
               Cancel
             </Link>
