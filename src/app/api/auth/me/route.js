@@ -1,20 +1,18 @@
-// ============================================
-// FILE: src/app/api/auth/me/route.js
-// ============================================
+// src/app/api/auth/me/route.js
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
     if (!decoded) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

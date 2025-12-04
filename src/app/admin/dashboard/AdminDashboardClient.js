@@ -28,7 +28,16 @@ export default function AdminDashboardClient() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const successMessage = searchParams.get('success');
 
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+  });
+
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchData();
   }, []);
 
@@ -46,8 +55,9 @@ export default function AdminDashboardClient() {
       setError(null);
 
       // Fetch user
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (userRes.status === 401) {
+        localStorage.removeItem('auth_token');
         router.push('/login');
         return;
       }
@@ -57,14 +67,16 @@ export default function AdminDashboardClient() {
       const userData = await userRes.json();
       const fetchedUser = userData.user;
       if (!fetchedUser || fetchedUser.role !== 'admin') {
+        localStorage.removeItem('auth_token');
         router.push('/login');
         return;
       }
       setUser(fetchedUser);
 
       // Fetch stats
-      const statsRes = await fetch('/api/admin/stats');
+      const statsRes = await fetch('/api/admin/stats', { headers: getAuthHeaders() });
       if (statsRes.status === 401) {
+        localStorage.removeItem('auth_token');
         router.push('/login');
         return;
       }
@@ -76,8 +88,9 @@ export default function AdminDashboardClient() {
       setStats(statsData.stats || {});
 
       // Fetch recent exams
-      const examsRes = await fetch('/api/admin/exams');
+      const examsRes = await fetch('/api/admin/exams', { headers: getAuthHeaders() });
       if (examsRes.status === 401) {
+        localStorage.removeItem('auth_token');
         router.push('/login');
         return;
       }

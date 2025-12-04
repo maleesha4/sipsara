@@ -21,7 +21,17 @@ export default function DashboardClient() {
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+  });
+
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
     // Check for success message from query params
     const success = searchParams.get('success');
     const admission = searchParams.get('admission');
@@ -40,8 +50,9 @@ export default function DashboardClient() {
   const fetchData = async () => {
     try {
       // Get user info
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (!userRes.ok) {
+        localStorage.removeItem('auth_token');
         console.error('Unauthorized access');
         router.push('/login?error=unauthorized');
         return;
@@ -50,14 +61,14 @@ export default function DashboardClient() {
       setUser(userData.user);
 
       // Get available exams
-      const examsRes = await fetch('/api/student/exams/available');
+      const examsRes = await fetch('/api/student/exams/available', { headers: getAuthHeaders() });
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setExams(examsData.exams || []);
       }
 
       // Get my registrations
-      const regsRes = await fetch('/api/student/registrations');
+      const regsRes = await fetch('/api/student/registrations', { headers: getAuthHeaders() });
       if (regsRes.ok) {
         const regsData = await regsRes.json();
         setRegistrations(regsData.registrations || []);
@@ -65,6 +76,7 @@ export default function DashboardClient() {
 
     } catch (error) {
       console.error('Error fetching data:', error);
+      localStorage.removeItem('auth_token');
       router.push('/login?error=fetch_failed');
     } finally {
       setLoading(false);

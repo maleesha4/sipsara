@@ -2,19 +2,19 @@
 // FILE: app/api/admin/exams/route.js
 // ============================================
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
     console.log('Exams API - Decoded user:', user ? { id: user.id, role: user.role } : 'null'); // Debug log
 
@@ -53,13 +53,13 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
     console.log('Exams POST - Decoded user:', user ? { id: user.id, role: user.role } : 'null'); // Debug log
 

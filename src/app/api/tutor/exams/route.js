@@ -2,19 +2,19 @@
 // FILE: app/api/tutor/exams/route.js
 // ============================================
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'tutor') {
@@ -45,10 +45,11 @@ export async function GET() {
         ae.exam_date,
         ae.status,
         g.grade_name
-      FROM admin_exam_subject_tutors aest
-      JOIN admin_exams ae ON aest.admin_exam_id = ae.id
+      FROM admin_exams ae
       JOIN grades g ON ae.grade_id = g.id
-      WHERE aest.tutor_id = $1
+      JOIN admin_exam_subjects aes ON ae.id = aes.admin_exam_id
+      JOIN tutor_subjects ts ON aes.subject_id = ts.subject_id
+      WHERE ts.tutor_id = $1
         AND ae.status IN ('registration_open', 'in_progress', 'completed')
       ORDER BY ae.exam_date DESC
       LIMIT 5
@@ -63,13 +64,14 @@ export async function GET() {
         const countsResult = await query(`
           SELECT 
             sub.name as subject_name,
-            COUNT(DISTINCT aesc.registration_id) as student_count
-          FROM admin_exam_subject_tutors aest
-          JOIN admin_exam_student_choices aesc ON aesc.subject_id = aest.subject_id
-          JOIN admin_exam_registrations aer ON aesc.registration_id = aer.id
-          JOIN subjects sub ON aesc.subject_id = sub.id
-          WHERE aest.admin_exam_id = $1 
-            AND aest.tutor_id = $2
+            COUNT(DISTINCT aer.id) as student_count
+          FROM admin_exam_subjects aes
+          JOIN tutor_subjects ts ON aes.subject_id = ts.subject_id
+          JOIN admin_exam_registrations aer ON aes.admin_exam_id = aer.admin_exam_id
+          JOIN admin_exam_student_choices aesc ON aer.id = aesc.registration_id AND aes.subject_id = aesc.subject_id
+          JOIN subjects sub ON aes.subject_id = sub.id
+          WHERE aes.admin_exam_id = $1 
+            AND ts.tutor_id = $2
             AND aer.status = 'confirmed'
           GROUP BY sub.id, sub.name
         `, [exam.id, tutorId]);
@@ -79,7 +81,7 @@ export async function GET() {
         return {
           ...exam,
           student_count_per_subject: Object.fromEntries(
-            countsResult.rows.map(row => [row.subject_name, row.student_count])
+            countsResult.rows.map(row => [row.subject_name, parseInt(row.student_count)])
           )
         };
       })

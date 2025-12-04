@@ -8,7 +8,7 @@ import { Eye, EyeOff } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // ✅ safely inside client component
+  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({ fullName: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -16,14 +16,40 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  useEffect(() => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('auth_token='))
-      ?.split('=')[1];
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` })
+    };
+  };
 
-    if (token) window.location.href = '/student/dashboard'; // Full nav for consistency
-    else setCheckingSession(false);
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setCheckingSession(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/me', { 
+          headers: getAuthHeaders() 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const role = data.user.role;
+          if (role === 'admin') window.location.href = '/admin/dashboard';
+          else if (role === 'tutor') window.location.href = '/tutor/dashboard';
+          else window.location.href = '/student/dashboard';
+          return;
+        }
+      } catch (err) {
+        // Ignore errors, proceed to login
+      }
+      localStorage.removeItem('auth_token');
+      setCheckingSession(false);
+    };
+    checkAuth();
   }, [router]);
 
   const handleSubmit = async (e) => {
@@ -33,11 +59,10 @@ function LoginContent() {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 
-      // Safe parse: Check if ok first, then text for debug if needed
       if (!res.ok) {
         const errorText = await res.text();
         let errorData;
@@ -49,9 +74,10 @@ function LoginContent() {
         throw new Error(errorData.error || 'Login failed');
       }
 
-      const data = await res.json(); // Now safe—response is JSON
+      const data = await res.json();
+      localStorage.setItem('auth_token', data.token);
 
-      // Client-side full navigation (sends cookie)
+      // Redirect based on role
       if (data.user.role === 'admin') window.location.href = '/admin/dashboard';
       else if (data.user.role === 'tutor') window.location.href = '/tutor/dashboard';
       else window.location.href = '/student/dashboard';

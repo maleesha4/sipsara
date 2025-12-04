@@ -23,7 +23,16 @@ export default function TutorDashboard() {
   const [error, setError] = useState('');  // New: For role/auth errors
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+  });
+
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchData();
   }, []);
 
@@ -32,8 +41,9 @@ export default function TutorDashboard() {
       setError('');  // Clear previous errors
 
       // Fetch logged-in user
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (!userRes.ok) {
+        localStorage.removeItem('auth_token');
         router.push('/login');
         return;
       }
@@ -43,14 +53,17 @@ export default function TutorDashboard() {
       // NEW: Role check - Backup to middleware
       if (fetchedUser.role !== 'tutor') {
         setError('Access denied: Insufficient permissions. Redirecting...');
-        setTimeout(() => router.push('/login'), 1500);  // Brief message before redirect
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+        }, 1500);  // Brief message before redirect
         return;
       }
 
       setUser(fetchedUser);
 
       // Fetch stats (subjects, active exams count, etc.)
-      const statsRes = await fetch('/api/tutor/stats');
+      const statsRes = await fetch('/api/tutor/stats', { headers: getAuthHeaders() });
       if (!statsRes.ok) {
         console.error('Stats fetch failed:', statsRes.status);
         // Don't block UI on stats failure
@@ -60,7 +73,7 @@ export default function TutorDashboard() {
       }
 
       // Fetch recent exams (assigned admin_exams with student counts per subject)
-      const examsRes = await fetch('/api/tutor/exams');
+      const examsRes = await fetch('/api/tutor/exams', { headers: getAuthHeaders() });
       if (!examsRes.ok) {
         console.error('Exams fetch failed:', examsRes.status);
         // Don't block UI on exams failure
