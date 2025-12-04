@@ -9,7 +9,7 @@ import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 import ChangePasswordModal from '../../../components/ChangePasswordModal';
 
-export default function AdminDashboard() {
+export default function TutorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   });
   const [recentExams, setRecentExams] = useState([]);  // array of {id, exam_name, date, student_count_per_subject}
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');  // New: For role/auth errors
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,8 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
+      setError('');  // Clear previous errors
+
       // Fetch logged-in user
       const userRes = await fetch('/api/auth/me');
       if (!userRes.ok) {
@@ -35,19 +38,39 @@ export default function AdminDashboard() {
         return;
       }
       const userData = await userRes.json();
-      setUser(userData.user);
+      const fetchedUser = userData.user;
+
+      // NEW: Role check - Backup to middleware
+      if (fetchedUser.role !== 'tutor') {
+        setError('Access denied: Insufficient permissions. Redirecting...');
+        setTimeout(() => router.push('/login'), 1500);  // Brief message before redirect
+        return;
+      }
+
+      setUser(fetchedUser);
 
       // Fetch stats (subjects, active exams count, etc.)
       const statsRes = await fetch('/api/tutor/stats');
-      const statsData = await statsRes.json();
-      setStats(statsData.stats || {});
+      if (!statsRes.ok) {
+        console.error('Stats fetch failed:', statsRes.status);
+        // Don't block UI on stats failure
+      } else {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats || {});
+      }
 
       // Fetch recent exams (assigned admin_exams with student counts per subject)
       const examsRes = await fetch('/api/tutor/exams');
-      const examsData = await examsRes.json();
-      setRecentExams(examsData.exams || []);
+      if (!examsRes.ok) {
+        console.error('Exams fetch failed:', examsRes.status);
+        // Don't block UI on exams failure
+      } else {
+        const examsData = await examsRes.json();
+        setRecentExams(examsData.exams || []);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('Failed to load dashboard. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -57,8 +80,24 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-gray-100">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <p>Loading...</p>
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <p className="text-xl">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p className="text-xl mb-4">{error}</p>
+          <button
+            onClick={fetchData}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -67,7 +106,7 @@ export default function AdminDashboard() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p>Access denied</p>
+        <p className="text-red-600">Access denied. Please log in.</p>
       </div>
     );
   }
@@ -77,7 +116,7 @@ export default function AdminDashboard() {
       <Navbar user={user} />
       
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-6">Tutor Dashboard</h1>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">

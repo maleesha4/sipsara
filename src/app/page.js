@@ -76,59 +76,63 @@ export default function Home() {
         <div className="text-center text-white">
           <h1 className="text-4xl sm:text-6xl font-bold mb-4 sm:mb-6">Sipsara Institute</h1>
           <h2 className="text-2xl sm:text-3xl mb-6 sm:mb-8">The Institute of Knowledge</h2>
+      
+      <div className="flex flex-row justify-center space-x-4 mt-6 w-full px-4">
 
-          {/* Login & Register Buttons */}
-          <div className="flex flex-row space-x-6 mt-6 justify-center">
-            <Link
-              href="/login"
-              className="px-16 py-6 rounded-xl font-semibold text-2xl bg-green-500 text-black shadow-xl hover:shadow-2xl hover:scale-100 hover:brightness-120 transition-all duration-500 inline-block"
-            >
-              Login
-            </Link>
+      {/* LOGIN */}
+      <Link
+        href="/login"
+        className="
+          flex-1 text-center 
+          px-4 py-3 text-lg font-semibold 
+          bg-green-500 text-black rounded-xl shadow-xl 
+          max-w-[120px] sm:max-w-[180px]     /* size changes */
+          sm:px-10 sm:py-6 sm:text-3xl         /* big screen size */
+          hover:shadow-2xl hover:scale-105 hover:brightness-110 
+          transition-all duration-500
+        "
+      >
+        Login
+      </Link>
 
-            <Link
-              href="/register"
-              className="px-16 py-6 rounded-xl font-semibold text-2xl bg-green-500 text-black shadow-xl hover:shadow-2xl hover:scale-100 hover:brightness-120 transition-all duration-500 inline-block"
-            >
-              Register
-            </Link>
-          </div>
+      {/* REGISTER */}
+      <Link
+        href="/register"
+        className="
+          flex-1 text-center 
+          px-4 py-3 text-lg font-semibold 
+          bg-green-500 text-black rounded-xl shadow-xl 
+          max-w-[120px] sm:max-w-[180px]     /* size changes */
+          sm:px-10 sm:py-6 sm:text-3xl         /* big screen size */
+          hover:shadow-2xl hover:scale-105 hover:brightness-110 
+          transition-all duration-500
+        "
+      >
+        Register
+      </Link>
+    </div>
+    </div>
 
+    {/* Info cards */}
+    <div className="grid md:grid-cols-3 gap-8 mt-10 mb-5">
+      <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6">
+
+        <Image
+          src="/img1.jpg"
+          alt="Students"
+          width={100}
+          height={100}
+          className="w-20 h-20 object-contain"
+        />
+
+        <div>
+          <h3 className="text-xl font-bold text-blue-600 mb-3">For Students</h3>
+          <ul className="text-gray-700 space-y-2">
+            <li>• Register for exams</li>
+          </ul>
         </div>
-
-        {/* Info cards */}
-        <div className="grid md:grid-cols-3 gap-8 mt-16">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-bold text-blue-600 mb-3">For Students</h3>
-            <ul className="text-gray-700 space-y-2">
-              <li>• Register for exams</li>
-              <li>• Download admission cards</li>
-              <li>• View results online</li>
-              <li>• Download papers & marking schemes</li>
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-bold text-purple-600 mb-3">For Tutors</h3>
-            <ul className="text-gray-700 space-y-2">
-              <li>• Enter student marks</li>
-              <li>• Upload papers & markings</li>
-              <li>• View analytics</li>
-              <li>• Track attendance</li>
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-bold text-red-600 mb-3">For Admins</h3>
-            <ul className="text-gray-700 space-y-2">
-              <li>• Create & manage exams</li>
-              <li>• Release admission cards</li>
-              <li>• Publish results</li>
-              <li>• Manage users</li>
-            </ul>
-          </div>
         </div>
-
+        </div>
       </div>
     </div>
   );
