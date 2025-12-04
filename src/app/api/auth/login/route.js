@@ -1,20 +1,16 @@
-// ============================================
-// FILE: app/api/auth/login/route.js
-// ============================================
+// src/app/api/auth/login/route.js
 import { NextResponse } from 'next/server';
-import { query } from '../../../../lib/database';
-import { verifyPassword, generateToken } from '../../../../lib/auth';
+import { query } from '../../../../lib/database';  // Adjusted path
+import { verifyPassword, generateToken } from '../../../../lib/auth';  // Adjusted
 
 export async function POST(request) {
   try {
     const { fullName, password } = await request.json();
 
-    // Basic validation
     if (!fullName || !password) {
       return NextResponse.json({ error: 'Full name and password are required' }, { status: 400 });
     }
 
-    // Fetch user by full_name (assumes full_name is UNIQUE across all users)
     const userResult = await query(
       `SELECT id, email, password_hash, role, full_name, status
        FROM users
@@ -40,7 +36,6 @@ export async function POST(request) {
     // Update last login
     await query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
-    // Generate token with user data
     const token = generateToken(user);
 
     const response = NextResponse.json({
@@ -50,21 +45,24 @@ export async function POST(request) {
         role: user.role,
         full_name: user.full_name
       }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'  // Prevent caching
+      }
     });
 
-    // Set cookie
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7  // 7 days
+      maxAge: 60 * 60 * 24 * 7
     });
 
     return response;
 
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+    console.error('Login error:', error);  // Logs to Vercel
+    return NextResponse.json({ error: 'Login failed: ' + error.message }, { status: 500 });
   }
 }
