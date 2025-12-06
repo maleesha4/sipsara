@@ -5,6 +5,11 @@
 
 import { useState } from 'react';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export default function ChangePasswordModal({ isOpen, onClose, user }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -42,7 +47,10 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
       setLoading(true);
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           current_password: currentPassword,
           new_password: newPassword
@@ -50,6 +58,12 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('auth_token');
+          onClose();
+          window.location.href = '/login';
+          return;
+        }
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to change password');
       }
@@ -59,6 +73,7 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
+        setSuccess('');
         onClose();
       }, 1500);
     } catch (err) {
@@ -76,13 +91,13 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
         <h2 className="text-2xl font-bold mb-4">Change Password</h2>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4 text-red-800 text-sm">
+          <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4 text-red-800 text-sm rounded">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4 text-green-800 text-sm">
+          <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4 text-green-800 text-sm rounded">
             {success}
           </div>
         )}

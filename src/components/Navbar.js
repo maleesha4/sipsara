@@ -13,6 +13,7 @@ export default function Navbar({ user: propUser }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [file, setFile] = useState(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const defaultAvatar = "/default-avatar.png";
   const [preview, setPreview] = useState(defaultAvatar);
   const [uploading, setUploading] = useState(false);
@@ -139,15 +140,15 @@ export default function Navbar({ user: propUser }) {
     <nav className="bg-black text-white shadow-lg">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          {/* LEFT SIDE: Profile + Welcome */}
+          {/* LEFT SIDE: Profile + Welcome (visible on all screens, but stacked on mobile) */}
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
               {/* Profile Picture */}
               <div className="relative">
                 <img
                   src={profilePhoto}
                   alt="Profile"
-                  className="w-12 h-12 rounded-full object-cover border border-gray-500 cursor-pointer"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-gray-500 cursor-pointer"
                   onClick={() => setShowDropdown(!showDropdown)}
                 />
                 {/* Dropdown */}
@@ -165,35 +166,69 @@ export default function Navbar({ user: propUser }) {
                   </div>
                 )}
               </div>
-              {/* Welcome + Role */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Hello, {user.full_name}</span>
+              {/* Welcome + Role (stacked on mobile, inline on larger) */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span className="text-xs sm:text-sm">Hello, {user.full_name}</span>
                 <span className="text-xs bg-blue-500 px-2 py-1 rounded">
                   {user.role?.toUpperCase()}
                 </span>
               </div>
             </div>
           ) : (
-            <span>Not Logged In</span>
+            <span className="text-sm">Not Logged In</span>
           )}
-          {/* RIGHT SIDE: Home + Logout */}
+          
+          {/* RIGHT SIDE: Hamburger on mobile, buttons on desktop */}
           <div className="flex items-center gap-3">
+            {/* Hamburger Menu Button (visible on mobile) */}
+            <button
+              className="sm:hidden text-white text-2xl"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+            >
+              ☰
+            </button>
+            
+            {/* Desktop Links (hidden on mobile) */}
+            <div className="hidden sm:flex items-center gap-3">
+              <Link
+                href="/"
+                className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded text-sm font-semibold"
+              >
+                Home
+              </Link>
+              {user && (
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm font-semibold"
+                >
+                  Logout
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {showMobileMenu && user && (
+          <div className="sm:hidden bg-gray-800 rounded-lg mt-2 p-4 space-y-2">
             <Link
               href="/"
-              className="bg-gray-700 hover:bg-gray-800 px-4 py-2 rounded text-sm font-semibold"
+              className="block w-full text-left bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-sm font-semibold"
+              onClick={() => setShowMobileMenu(false)}
             >
               Home
             </Link>
-            {user && (
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm font-semibold"
-              >
-                Logout
-              </button>
-            )}
+            <button
+              onClick={() => {
+                handleLogout();
+                setShowMobileMenu(false);
+              }}
+              className="block w-full text-left bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm font-semibold"
+            >
+              Logout
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modal for profile picture */}

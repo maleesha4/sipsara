@@ -8,8 +8,15 @@ import { cookies } from 'next/headers';
 
 export async function GET(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    // Extract token preferring Authorization header (sent by client fetches), fallback to cookie
+    const authHeader = request.headers.get('authorization');
+    let token;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get('auth_token')?.value;
+    }
 
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -34,22 +41,25 @@ export async function GET(request) {
     const studentId = studentResult.rows[0].id;
 
     // Get registrations with exam details - FIX: Specify table aliases for all columns
+    // Also add DISTINCT to STRING_AGG to avoid potential duplicates
+    // Add registration_date (assuming aer.created_at exists; adjust column name if different)
     const regsResult = await query(`
       SELECT 
         aer.id,
         aer.admin_exam_id,
         aer.status,
         aer.admission_number,
+        aer.created_at as registration_date,
         ae.exam_name,
         ae.exam_date,
         ae.published_at,
-        STRING_AGG(s.name, ', ') as chosen_subjects
+        STRING_AGG(DISTINCT s.name, ', ') as chosen_subjects
       FROM admin_exam_registrations aer
       JOIN admin_exams ae ON aer.admin_exam_id = ae.id
       LEFT JOIN admin_exam_student_choices aesc ON aer.id = aesc.registration_id
       LEFT JOIN subjects s ON aesc.subject_id = s.id
       WHERE aer.student_id = $1
-      GROUP BY aer.id, ae.id, ae.exam_name, ae.exam_date, ae.published_at
+      GROUP BY aer.id, aer.created_at, ae.id, ae.exam_name, ae.exam_date, ae.published_at
       ORDER BY ae.exam_date DESC
     `, [studentId]);
 

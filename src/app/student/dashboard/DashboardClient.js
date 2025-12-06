@@ -10,6 +10,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ChangePasswordModal from '../../../components/ChangePasswordModal';
 
+const getAuthHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+});
+
 export default function DashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,10 +24,6 @@ export default function DashboardClient() {
   const [successMessage, setSuccessMessage] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
-  });
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -83,10 +83,17 @@ export default function DashboardClient() {
     }
   };
 
-  // Filter out already registered exams
-  const availableExamsCount = exams.filter(exam => 
-    !registrations.some(reg => reg.admin_exam_id === exam.id)
-  ).length;
+  // Filter available exams: not registered AND registration period open
+  const now = new Date();
+  const availableExams = exams.filter(exam => {
+    const regStart = new Date(exam.registration_start_date);
+    const regEnd = new Date(exam.registration_end_date);
+    const isOpen = now >= regStart && now <= regEnd && exam.status === 'registration_open';
+    const notRegistered = !registrations.some(reg => reg.admin_exam_id === exam.id);
+    return isOpen && notRegistered;
+  });
+
+  const availableExamsCount = availableExams.length;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -162,7 +169,8 @@ export default function DashboardClient() {
             src="/logo.png" 
             alt="Institute Logo" 
             width={120} 
-            height={120} 
+            height={120}
+            className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-[120px] lg:h-[120px] object-contain"
           />
         </div>
 
@@ -171,9 +179,10 @@ export default function DashboardClient() {
             src="/sipsara.png" 
             alt="සිප්සර" 
             width={300} 
-            height={80} 
+            height={80}
+            className="w-48 h-12 sm:w-64 sm:h-16 md:w-80 md:h-20 lg:w-[300px] lg:h-[80px] object-contain"
           />
-          <h1 className="text-3xl font-bold mt-3 text-black">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mt-3 text-black">
             අධ්‍යාපන ආයතනය
           </h1>
         </div>
@@ -202,11 +211,11 @@ export default function DashboardClient() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">Available Exams</h2>
-            {exams.length === 0 ? (
+            {availableExams.length === 0 ? (
               <p className="text-gray-500">No exams available</p>
             ) : (
               <div className="space-y-4">
-                {exams.filter(exam => !registrations.some(reg => reg.admin_exam_id === exam.id)).slice(0, 3).map(exam => {
+                {availableExams.slice(0, 3).map(exam => {
                   return (
                     <div key={exam.id} className="border-l-4 border-blue-500 pl-4">
                       <h3 className="font-semibold">{exam.exam_name}</h3>

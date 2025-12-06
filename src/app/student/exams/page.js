@@ -9,6 +9,11 @@ import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export default function StudentExams() {
   const router = useRouter();
   const [exams, setExams] = useState([]);
@@ -18,6 +23,11 @@ export default function StudentExams() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchData();
   }, []);
 
@@ -27,30 +37,43 @@ export default function StudentExams() {
       setError('');
 
       // Get user info
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (!userRes.ok) {
-        router.push('/login');
-        return;
+        if (userRes.status === 401) {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch user info');
       }
       const userData = await userRes.json();
       setUser(userData.user);
 
       // Get available exams
-      const examsRes = await fetch('/api/student/exams/available');
-      if (examsRes.ok) {
-        const examsData = await examsRes.json();
-        setExams(examsData.exams || []);
-      } else if (examsRes.status === 401) {
-        router.push('/login');
-        return;
+      const examsRes = await fetch('/api/student/exams/available', { headers: getAuthHeaders() });
+      if (!examsRes.ok) {
+        if (examsRes.status === 401) {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch exams');
       }
+      const examsData = await examsRes.json();
+      setExams(examsData.exams || []);
 
       // Get registrations
-      const regsRes = await fetch('/api/student/registrations');
-      if (regsRes.ok) {
-        const regsData = await regsRes.json();
-        setRegistrations(regsData.registrations || []);
+      const regsRes = await fetch('/api/student/registrations', { headers: getAuthHeaders() });
+      if (!regsRes.ok) {
+        if (regsRes.status === 401) {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch registrations');
       }
+      const regsData = await regsRes.json();
+      setRegistrations(regsData.registrations || []);
     } catch (err) {
       setError('Failed to load exams');
       console.error(err);
@@ -59,10 +82,15 @@ export default function StudentExams() {
     }
   };
 
-  // Filter out already registered exams from available list
-  const availableExams = exams.filter(exam => 
-    !registrations.some(reg => reg.admin_exam_id === exam.id)
-  );
+  // Filter available exams: registration period open AND not already registered
+  const now = new Date();
+  const availableExams = exams.filter(exam => {
+    const regStart = new Date(exam.registration_start_date);
+    const regEnd = new Date(exam.registration_end_date);
+    const isRegOpen = now >= regStart && now <= regEnd && exam.status === 'registration_open';
+    const notRegistered = !registrations.some(reg => reg.admin_exam_id === exam.id);
+    return isRegOpen && notRegistered;
+  });
 
   if (loading) {
     return (
@@ -129,9 +157,9 @@ export default function StudentExams() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {availableExams.map(exam => {
-              const now = new Date();
               const regStart = new Date(exam.registration_start_date);
               const regEnd = new Date(exam.registration_end_date);
+              // Since filtered, isRegOpen is true, but confirm for button
               const isRegOpen = now >= regStart && now <= regEnd && exam.status === 'registration_open';
 
               return (

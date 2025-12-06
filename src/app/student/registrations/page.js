@@ -4,6 +4,11 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export default function StudentRegistrations() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -11,24 +16,39 @@ export default function StudentRegistrations() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const userRes = await fetch('/api/auth/me');
+      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (!userRes.ok) {
-        router.push('/login');
-        return;
+        if (userRes.status === 401) {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch user info');
       }
       const userData = await userRes.json();
       setUser(userData.user);
 
-      const regsRes = await fetch('/api/student/registrations');
-      if (regsRes.ok) {
-        const regsData = await regsRes.json();
-        setRegistrations(regsData.registrations || []);
+      const regsRes = await fetch('/api/student/registrations', { headers: getAuthHeaders() });
+      if (!regsRes.ok) {
+        if (regsRes.status === 401) {
+          localStorage.removeItem('auth_token');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch registrations');
       }
+      const regsData = await regsRes.json();
+      setRegistrations(regsData.registrations || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {

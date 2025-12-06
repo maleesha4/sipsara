@@ -9,8 +9,15 @@ import { cookies } from 'next/headers';
 
 export async function POST(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    // Extract token preferring Authorization header, fallback to cookie
+    const authHeader = request.headers.get('authorization');
+    let token;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get('auth_token')?.value;
+    }
 
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
