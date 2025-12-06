@@ -16,7 +16,7 @@ export default function AdminDashboardClient() {
   const [showNotification, setShowNotification] = useState(false);
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
-    totalStudents: 0,
+    totalStudents: { grade6: 0, grade7: 0, grade8: 0, grade9: 0, grade10: 0, grade11: 0 },
     totalTutors: 0,
     totalExams: 0,
     activeExams: 0,
@@ -29,6 +29,7 @@ export default function AdminDashboardClient() {
   const successMessage = searchParams.get('success');
 
   const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
     Authorization: `Bearer ${localStorage.getItem('auth_token')}`
   });
 
@@ -39,7 +40,7 @@ export default function AdminDashboardClient() {
       return;
     }
     fetchData();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (successMessage) {
@@ -55,7 +56,10 @@ export default function AdminDashboardClient() {
       setError(null);
 
       // Fetch user
-      const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      const userRes = await fetch('/api/auth/me', { 
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       if (userRes.status === 401) {
         localStorage.removeItem('auth_token');
         router.push('/login');
@@ -74,7 +78,10 @@ export default function AdminDashboardClient() {
       setUser(fetchedUser);
 
       // Fetch stats
-      const statsRes = await fetch('/api/admin/stats', { headers: getAuthHeaders() });
+      const statsRes = await fetch('/api/admin/stats', { 
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       if (statsRes.status === 401) {
         localStorage.removeItem('auth_token');
         router.push('/login');
@@ -85,10 +92,19 @@ export default function AdminDashboardClient() {
       }
       const statsData = await statsRes.json();
       console.log('Stats API:', statsData);
-      setStats(statsData.stats || {});
+      setStats(statsData.stats || {
+        totalStudents: { grade6: 0, grade7: 0, grade8: 0, grade9: 0, grade10: 0, grade11: 0 },
+        totalTutors: 0,
+        totalExams: 0,
+        activeExams: 0,
+        pendingRegistrations: 0
+      });
 
       // Fetch recent exams
-      const examsRes = await fetch('/api/admin/exams', { headers: getAuthHeaders() });
+      const examsRes = await fetch('/api/admin/exams', { 
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       if (examsRes.status === 401) {
         localStorage.removeItem('auth_token');
         router.push('/login');
@@ -111,8 +127,8 @@ export default function AdminDashboardClient() {
     return (
       <div className="min-h-screen bg-gray-100">
         <Navbar user={user} />
-        <div className="container mx-auto px-4 py-8">
-          <p>Loading...</p>
+        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <p className="text-lg">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -121,13 +137,19 @@ export default function AdminDashboardClient() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Error Loading Dashboard</h1>
-          <p>{error}</p>
-          <button onClick={fetchData} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">
+        <div className="text-center p-6 bg-white rounded-lg shadow">
+          <h1 className="text-2xl font-bold mb-4 text-red-600">Error Loading Dashboard</h1>
+          <p className="mb-4 text-gray-600">{error}</p>
+          <button 
+            onClick={fetchData} 
+            className="mr-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
+          >
             Retry
           </button>
-          <Link href="/login" className="ml-2 bg-red-500 text-white px-4 py-2 rounded">
+          <Link 
+            href="/login" 
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
+          >
             Logout
           </Link>
         </div>
@@ -141,30 +163,26 @@ export default function AdminDashboardClient() {
       
       {/* Success Notification */}
       {showNotification && (
-        <div className="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse z-50">
+        <div className="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse">
           ✓ {successMessage}
         </div>
       )}
       
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-5 gap-6 mb-8">
           <div className="bg-blue-500 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Total Students</h3>
-            {stats.totalStudents ? (
-              <div className="text-lg space-y-1">
-                <p>Grade 6: {stats.totalStudents?.grade6 || 0}</p>
-                <p>Grade 7: {stats.totalStudents?.grade7 || 0}</p>
-                <p>Grade 8: {stats.totalStudents?.grade8 || 0}</p>
-                <p>Grade 9: {stats.totalStudents?.grade9 || 0}</p>
-                <p>Grade 10: {stats.totalStudents?.grade10 || 0}</p>
-                <p>Grade 11: {stats.totalStudents?.grade11 || 0}</p>
-              </div>
-            ) : (
-              <p className="text-4xl font-bold">0</p>
-            )}
+            <div className="text-lg space-y-1">
+              <p>Grade 6: {stats.totalStudents.grade6 || 0}</p>
+              <p>Grade 7: {stats.totalStudents.grade7 || 0}</p>
+              <p>Grade 8: {stats.totalStudents.grade8 || 0}</p>
+              <p>Grade 9: {stats.totalStudents.grade9 || 0}</p>
+              <p>Grade 10: {stats.totalStudents.grade10 || 0}</p>
+              <p>Grade 11: {stats.totalStudents.grade11 || 0}</p>
+            </div>
           </div>
 
           <div className="bg-purple-500 text-white p-6 rounded-lg shadow">
@@ -187,43 +205,48 @@ export default function AdminDashboardClient() {
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Link href="/admin/exams/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/exams/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-blue-600 text-4xl mb-2">➕</div>
             <h3 className="font-semibold text-lg">Create Exam</h3>
             <p className="text-gray-600 text-sm">Set up a new exam</p>
           </Link>
-          <Link href="/admin/students" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/students" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-green-600 text-4xl mb-2">👥</div>
             <h3 className="font-semibold text-lg">Manage Students</h3>
             <p className="text-gray-600 text-sm">View & edit students</p>
           </Link>
-          <Link href="/admin/tutors" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/tutors" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-purple-600 text-4xl mb-2">👨‍🏫</div>
             <h3 className="font-semibold text-lg">Manage Tutors</h3>
             <p className="text-gray-600 text-sm">View & edit tutors</p>
           </Link>
-          <Link href="/admin/reports" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/reports" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-orange-600 text-4xl mb-2">📊</div>
             <h3 className="font-semibold text-lg">Reports</h3>
             <p className="text-gray-600 text-sm">Analytics & reports</p>
           </Link>
-          <Link href="/admin/students/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/students/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-red-600 text-4xl mb-2">➕</div>
             <h3 className="font-semibold text-lg">Create Student</h3>
             <p className="text-gray-600 text-sm">Add a new student</p>
           </Link>
-          <Link href="/admin/tutors/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <Link href="/admin/tutors/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-indigo-600 text-4xl mb-2">➕</div>
             <h3 className="font-semibold text-lg">Create Tutor</h3>
             <p className="text-gray-600 text-sm">Add a new tutor</p>
+          </Link>
+          <Link href="/admin/subjects/create" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div className="text-teal-600 text-4xl mb-2">📚</div>
+            <h3 className="font-semibold text-lg">Create Subject</h3>
+            <p className="text-gray-600 text-sm">Add a new subject</p>
           </Link>
         </div>
 
         {/* Recent Exams */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Recent Exams</h2>
-            <Link href="/admin/exams" className="text-blue-600 hover:underline">
+            <h2 className="text-xl font-bold text-gray-800">Recent Exams</h2>
+            <Link href="/admin/exams" className="text-blue-600 hover:underline text-sm">
               View All →
             </Link>
           </div>
@@ -235,11 +258,11 @@ export default function AdminDashboardClient() {
                 <div key={exam.id} className="border-l-4 border-blue-500 pl-4 py-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold">{exam.exam_name}</h3>
+                      <h3 className="font-semibold text-gray-800">{exam.exam_name}</h3>
                       <p className="text-sm text-gray-600">
                         Date: {new Date(exam.exam_date).toLocaleDateString()} | 
-                        Status: {exam.status} | 
-                        Registrations: {exam.registration_count}
+                        Status: <span className="capitalize">{exam.status}</span> | 
+                        Registrations: {exam.registration_count || 0}
                       </p>
                     </div>
                     <Link
@@ -261,7 +284,7 @@ export default function AdminDashboardClient() {
         <div className="container mx-auto flex justify-end">
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition font-semibold flex items-center gap-2 text-sm"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center gap-2 text-sm"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />

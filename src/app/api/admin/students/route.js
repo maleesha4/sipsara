@@ -1,13 +1,19 @@
-// app/api/admin/students/route.js
+// ============================================
+// FILE: src/app/api/admin/students/route.js
+// ============================================
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
 
 export async function GET(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {
@@ -65,8 +71,12 @@ export async function GET(req) {
 
 export async function PATCH(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {
@@ -94,11 +104,11 @@ export async function PATCH(req) {
 
     if (full_name !== undefined) {
       userUpdates.push(`full_name = $${paramIndex++}`);
-      userParams.push(full_name);
+      userParams.push(full_name.trim());
     }
     if (email !== undefined) {
       userUpdates.push(`email = $${paramIndex++}`);
-      userParams.push(email);
+      userParams.push(email.trim());
     }
     if (status !== undefined) {
       userUpdates.push(`status = $${paramIndex++}`);
@@ -142,11 +152,11 @@ export async function PATCH(req) {
     }
     if (address !== undefined) {
       studentUpdates.push(`address = $${paramIndex++}`);
-      studentParams.push(address);
+      studentParams.push(address.trim());
     }
     if (parent_name !== undefined) {
       studentUpdates.push(`parent_name = $${paramIndex++}`);
-      studentParams.push(parent_name);
+      studentParams.push(parent_name.trim());
     }
 
     if (studentUpdates.length > 0) {
@@ -166,8 +176,12 @@ export async function PATCH(req) {
 
 export async function DELETE(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {

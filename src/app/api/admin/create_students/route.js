@@ -1,15 +1,21 @@
-// app/api/admin/create_students/route.js
+// ============================================
+// FILE: src/app/api/admin/create_students/route.js
+// ============================================
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
 import { hashPassword } from '../../../../lib/auth';
 
 export async function POST(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-    const decodedUser = verifyToken(token);  // Renamed to avoid redeclaration
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
+    const decodedUser = verifyToken(token);
 
     if (!decodedUser || decodedUser.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +31,7 @@ export async function POST(req) {
     }
 
     // Email validation (Gmail only, as per registration)
-    if (!email.endsWith('@gmail.com')) {
+    if (!email.trim().endsWith('@gmail.com')) {
       return NextResponse.json({ error: 'Email must be a Gmail address' }, { status: 400 });
     }
 
@@ -42,7 +48,7 @@ export async function POST(req) {
     }
 
     // Check if full_name already exists
-    const existingUser = await query('SELECT id FROM users WHERE full_name = $1', [fullName]);
+    const existingUser = await query('SELECT id FROM users WHERE full_name = $1', [fullName.trim()]);
     if (existingUser.rows.length > 0) {
       return NextResponse.json({ error: 'Full name already registered' }, { status: 400 });
     }
@@ -69,7 +75,7 @@ export async function POST(req) {
         (email, password_hash, role, full_name, phone, status)
        VALUES ($1, $2, 'student', $3, $4, 'active')
        RETURNING id, full_name, role`,
-      [email, passwordHash, fullName, phone]
+      [email.trim(), passwordHash, fullName.trim(), phone]
     );
     const createdUser = userResult.rows[0];
 
@@ -77,7 +83,7 @@ export async function POST(req) {
     await query(
       `INSERT INTO students (user_id, index_number, current_grade_id, date_of_birth, address, parent_name, gender, enrollment_date)
        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)`,
-      [createdUser.id, indexNumber, gradeId, dateOfBirth, address, parentName, gender]
+      [createdUser.id, indexNumber, gradeId, dateOfBirth, address.trim(), parentName.trim(), gender]
     );
 
     return NextResponse.json({

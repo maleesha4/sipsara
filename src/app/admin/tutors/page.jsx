@@ -1,6 +1,11 @@
+// ============================================
+// FILE: src/app/admin/tutors/page.jsx (ManageTutors - FIXED)
+// ============================================
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 // Custom debounce hook
 function useDebounce(value, delay) {
@@ -20,16 +25,27 @@ function useDebounce(value, delay) {
 }
 
 export default function ManageTutors() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tutors, setTutors] = useState([]);
-  const [subjects, setSubjects] = useState([]);  // For edit modal
+  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null); // FIXED: separate success state
   const [editingTutor, setEditingTutor] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false); // FIXED: button loading state
+  const createdMessage = searchParams.get('created');
 
   const debouncedSearch = useDebounce(search, 300);
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+  });
 
   // Fetch tutors function
   const fetchTutors = useCallback(async (query = '', status = 'all') => {
@@ -39,7 +55,10 @@ export default function ManageTutors() {
       const params = new URLSearchParams();
       if (query) params.append('search', query);
       if (status !== 'all') params.append('status', status);
-      const res = await fetch(`/api/admin/tutors?${params.toString()}`);
+      const res = await fetch(`/api/admin/tutors?${params.toString()}`, {
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -58,7 +77,10 @@ export default function ManageTutors() {
   // Fetch subjects for edit modal
   const fetchSubjects = async () => {
     try {
-      const res = await fetch('/api/subjects');
+      const res = await fetch('/api/admin/subjects', {
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       if (res.ok) {
         const data = await res.json();
         setSubjects(data.subjects || []);
@@ -73,6 +95,13 @@ export default function ManageTutors() {
     fetchTutors(debouncedSearch, statusFilter);
     fetchSubjects();
   }, [fetchTutors, debouncedSearch, statusFilter]);
+
+  useEffect(() => {
+    if (createdMessage) {
+      const timer = setTimeout(() => router.replace('/admin/tutors'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [createdMessage, router]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -94,18 +123,22 @@ export default function ManageTutors() {
   const closeModal = () => {
     setShowModal(false);
     setEditingTutor(null);
+    setSubmitting(false);
   };
 
-  // Handle edit submit
+  // Handle edit submit - FIXED
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingTutor) return;
 
+    setSubmitting(true); // FIXED: Show loading state on button
+
     try {
       const res = await fetch('/api/admin/tutors', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(editingTutor),
+        credentials: 'same-origin'
       });
 
       if (!res.ok) {
@@ -113,23 +146,27 @@ export default function ManageTutors() {
         throw new Error(data.error || 'Failed to update tutor');
       }
 
-      // Refetch after update
       await fetchTutors(debouncedSearch, statusFilter);
       closeModal();
+      setSuccess('Tutor updated successfully');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.message);
+      setSubmitting(false); // Reset on error
     }
   };
 
-  // Handle delete
+  // Handle delete - FIXED
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this tutor? This action cannot be undone.')) return;
+    setDeletingId(id);
 
     try {
       const res = await fetch('/api/admin/tutors', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id }),
+        credentials: 'same-origin'
       });
 
       if (!res.ok) {
@@ -137,10 +174,13 @@ export default function ManageTutors() {
         throw new Error(data.error || 'Failed to delete tutor');
       }
 
-      // Refetch after delete
       await fetchTutors(debouncedSearch, statusFilter);
+      setSuccess('Tutor deleted successfully');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -154,7 +194,25 @@ export default function ManageTutors() {
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Manage Tutors</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Manage Tutors</h1>
+        <Link href="/admin/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors">
+          Back to Dashboard
+        </Link>
+      </div>
+
+      {createdMessage && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          Tutor created successfully!
+        </div>
+      )}
+
+      {/* FIXED: Success message in green */}
+      {success && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          {success}
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <input
@@ -174,19 +232,21 @@ export default function ManageTutors() {
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
         </select>
-        <button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors"
-          onClick={() => window.location.href = '/admin/dashboard'}
+        <Link
+          href="/admin/tutors/create"
+          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md transition-colors"
         >
-          Back to Dashboard
-        </button>
+          Create Tutor
+        </Link>
       </div>
 
-      {error ? (
+      {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
           Error: {error}
         </div>
-      ) : tutors.length === 0 ? (
+      )}
+
+      {tutors.length === 0 ? (
         <p className="text-gray-500 text-center py-8">No tutors found.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -228,9 +288,10 @@ export default function ManageTutors() {
                       </button>
                       <button
                         onClick={() => handleDelete(t.id)}
-                        className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-xs transition-colors"
+                        disabled={deletingId === t.id}
+                        className="bg-red-500 hover:bg-red-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs transition-colors"
                       >
-                        Delete
+                        {deletingId === t.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
                   </td>
@@ -243,8 +304,8 @@ export default function ManageTutors() {
 
       {/* Edit Modal */}
       {showModal && editingTutor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Edit Tutor</h2>
             <form onSubmit={handleEditSubmit}>
               <input type="hidden" value={editingTutor.id} />
@@ -255,7 +316,7 @@ export default function ManageTutors() {
                   type="text"
                   value={editingTutor.full_name || ''}
                   onChange={(e) => setEditingTutor({ ...editingTutor, full_name: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -266,7 +327,7 @@ export default function ManageTutors() {
                   type="email"
                   value={editingTutor.email || ''}
                   onChange={(e) => setEditingTutor({ ...editingTutor, email: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -276,7 +337,7 @@ export default function ManageTutors() {
                   type="text"
                   value={editingTutor.phone || ''}
                   onChange={(e) => setEditingTutor({ ...editingTutor, phone: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -285,7 +346,7 @@ export default function ManageTutors() {
                 <select
                   value={editingTutor.specialization || ''}
                   onChange={(e) => setEditingTutor({ ...editingTutor, specialization: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select Subject</option>
@@ -300,7 +361,7 @@ export default function ManageTutors() {
                 <select
                   value={editingTutor.status || ''}
                   onChange={(e) => setEditingTutor({ ...editingTutor, status: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="active">Active</option>
@@ -313,15 +374,17 @@ export default function ManageTutors() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                  disabled={submitting}
+                  className="bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-800 px-4 py-2 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                  disabled={submitting}
+                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-md transition-colors"
                 >
-                  Save Changes
+                  {submitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

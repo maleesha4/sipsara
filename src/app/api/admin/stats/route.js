@@ -20,7 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get statistics with parallel queries
+    // Get statistics with parallel queries, filtering for active users/exams where appropriate
     const [studentsRes, tutorsRes, examsRes, activeExamsRes, pendingRegsRes] = await Promise.all([
       query(`
         SELECT 
@@ -30,22 +30,29 @@ export async function GET() {
           COALESCE(SUM(CASE WHEN g.year = 9 THEN 1 ELSE 0 END), 0) as grade9,
           COALESCE(SUM(CASE WHEN g.year = 10 THEN 1 ELSE 0 END), 0) as grade10,
           COALESCE(SUM(CASE WHEN g.year = 11 THEN 1 ELSE 0 END), 0) as grade11
-        FROM students s 
-        LEFT JOIN grades g ON s.current_grade_id = g.id
+        FROM students s
+        JOIN users u ON s.user_id = u.id AND u.status = 'active'
+        JOIN grades g ON s.current_grade_id = g.id AND g.status = 'active'
       `),
-      query('SELECT COUNT(*) as count FROM users WHERE role = $1', ['tutor']),
+      query('SELECT COUNT(*) as count FROM users WHERE role = $1 AND status = $2', ['tutor', 'active']),
       query('SELECT COUNT(*) as count FROM admin_exams'),
       query("SELECT COUNT(*) as count FROM admin_exams WHERE status IN ('registration_open', 'in_progress')"),
-      query("SELECT COUNT(*) as count FROM admin_exam_registrations WHERE status = 'registered'")
+      query(`
+        SELECT COUNT(*) as count 
+        FROM admin_exam_registrations aer 
+        JOIN admin_exams ae ON aer.admin_exam_id = ae.id 
+        WHERE aer.status = 'registered' 
+          AND ae.status IN ('registration_open', 'in_progress')
+      `)
     ]);
 
     return NextResponse.json({
       stats: {
         totalStudents: studentsRes.rows[0],
-        totalTutors: parseInt(tutorsRes.rows[0].count),
-        totalExams: parseInt(examsRes.rows[0].count),
-        activeExams: parseInt(activeExamsRes.rows[0].count),
-        pendingRegistrations: parseInt(pendingRegsRes.rows[0].count)
+        totalTutors: Number(tutorsRes.rows[0].count) || 0,
+        totalExams: Number(examsRes.rows[0].count) || 0,
+        activeExams: Number(activeExamsRes.rows[0].count) || 0,
+        pendingRegistrations: Number(pendingRegsRes.rows[0].count) || 0
       }
     });
 
