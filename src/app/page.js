@@ -38,7 +38,7 @@ export default function Home() {
           {/* Rectangle 1 - FIXED */}
           <div className="w-full aspect-[16/9] bg-gray-200 rounded-lg overflow-hidden shadow-lg">
             <Image
-              src="/img1.jpg"
+              src="/image.png"
               alt="Image 1"
               width={800}
               height={450}
@@ -49,7 +49,7 @@ export default function Home() {
           {/* Rectangle 2 - FIXED */}
           <div className="w-full aspect-[16/9] bg-gray-200 rounded-lg overflow-hidden shadow-lg">
             <Image
-              src="/img2.jpg"
+              src="/img2.png"
               alt="Image 2"
               width={800}
               height={450}
@@ -126,12 +126,48 @@ export default function Home() {
         />
 
         <div>
-          <h3 className="text-xl font-bold text-blue-600 mb-3">For Students</h3>
+          <h4 className="text-l font-bold text-black mb-3">සිංහල භාෂාව හා සාහිත්‍යය</h4>
           <ul className="text-gray-700 space-y-2">
-            <li>• Register for exams</li>
+            <li>• කසුන් වෙඩිසිංහ</li>
           </ul>
         </div>
         </div>
+        <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6">
+
+        <Image
+          src="/img1.jpg"
+          alt="Students"
+          width={100}
+          height={100}
+          className="w-20 h-20 object-contain"
+        />
+
+        <div>
+          <h4 className="text-l font-bold text-black mb-3">සිංහල භාෂාව හා සාහිත්‍යය</h4>
+          <ul className="text-gray-700 space-y-2">
+            <li>• කසුන් වෙඩිසිංහ</li>
+          </ul>
+        </div>
+        </div>
+      
+      <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6">
+
+        <Image
+          src="/img1.jpg"
+          alt="Students"
+          width={100}
+          height={100}
+          className="w-20 h-20 object-contain"
+        />
+
+        <div>
+          <h4 className="text-l font-bold text-black mb-3">සිංහල භාෂාව හා සාහිත්‍යය</h4>
+          <ul className="text-gray-700 space-y-2">
+            <li>• කසුන් වෙඩිසිංහ</li>
+          </ul>
+        </div>
+        </div>
+
         </div>
       </div>
     </div>

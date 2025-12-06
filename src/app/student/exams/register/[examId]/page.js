@@ -7,6 +7,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from "next/image";
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export default function RegisterExam() {
   const params = useParams();
   const router = useRouter();
@@ -20,15 +25,21 @@ export default function RegisterExam() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     fetchExam();
     fetchSubjects();
   }, [examId]);
 
   const fetchExam = async () => {
     try {
-      const res = await fetch(`/api/student/exams/${examId}`);
+      const res = await fetch(`/api/student/exams/${examId}`, { headers: getAuthHeaders() });
       if (!res.ok) {
         if (res.status === 401) {
+          localStorage.removeItem('auth_token');
           router.push('/login');
           return;
         }
@@ -44,9 +55,10 @@ export default function RegisterExam() {
 
   const fetchSubjects = async () => {
     try {
-      const res = await fetch(`/api/student/exams/${examId}/subjects`);
+      const res = await fetch(`/api/student/exams/${examId}/subjects`, { headers: getAuthHeaders() });
       if (!res.ok) {
         if (res.status === 401) {
+          localStorage.removeItem('auth_token');
           router.push('/login');
           return;
         }
@@ -81,7 +93,10 @@ export default function RegisterExam() {
       setRegistering(true);
       const res = await fetch('/api/student/exams/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
           exam_id: parseInt(examId),
           subject_ids: selectedSubjects
@@ -90,6 +105,7 @@ export default function RegisterExam() {
 
       if (!res.ok) {
         if (res.status === 401) {
+          localStorage.removeItem('auth_token');
           router.push('/login');
           return;
         }
