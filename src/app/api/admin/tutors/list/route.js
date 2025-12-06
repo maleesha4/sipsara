@@ -1,20 +1,21 @@
 // ============================================
-// FILE: app/api/admin/tutors/list/route.js
+// FILE: src/app/api/admin/tutors/list/route.js (Deprecated/Unused - Remove or Merge if Needed)
 // ============================================
+// Note: This route seems redundant with /api/admin/tutors. Consider removing it in production.
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../../lib/auth';
 import { query } from '../../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function GET(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {

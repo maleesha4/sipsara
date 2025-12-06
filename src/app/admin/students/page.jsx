@@ -1,6 +1,11 @@
+// ============================================
+// FILE: src/app/admin/students/page.jsx (ManageStudents - FIXED)
+// ============================================
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 // Custom debounce hook
 function useDebounce(value, delay) {
@@ -20,15 +25,26 @@ function useDebounce(value, delay) {
 }
 
 export default function ManageStudents() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null); // FIXED: separate success state
   const [editingStudent, setEditingStudent] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false); // FIXED: button loading state
+  const createdMessage = searchParams.get('created');
 
   const debouncedSearch = useDebounce(search, 300);
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+  });
 
   // Fetch students function
   const fetchStudents = useCallback(async (query = '', grade = 'all') => {
@@ -38,7 +54,10 @@ export default function ManageStudents() {
       const params = new URLSearchParams();
       if (query) params.append('search', query);
       if (grade !== 'all') params.append('grade', grade);
-      const res = await fetch(`/api/admin/students?${params.toString()}`);
+      const res = await fetch(`/api/admin/students?${params.toString()}`, {
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -58,6 +77,13 @@ export default function ManageStudents() {
   useEffect(() => {
     fetchStudents(debouncedSearch, gradeFilter);
   }, [fetchStudents, debouncedSearch, gradeFilter]);
+
+  useEffect(() => {
+    if (createdMessage) {
+      const timer = setTimeout(() => router.replace('/admin/students'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [createdMessage, router]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -79,18 +105,22 @@ export default function ManageStudents() {
   const closeModal = () => {
     setShowModal(false);
     setEditingStudent(null);
+    setSubmitting(false);
   };
 
-  // Handle edit submit
+  // Handle edit submit - FIXED
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingStudent) return;
 
+    setSubmitting(true); // FIXED: Show loading state on button
+
     try {
       const res = await fetch('/api/admin/students', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(editingStudent),
+        credentials: 'same-origin'
       });
 
       if (!res.ok) {
@@ -98,23 +128,27 @@ export default function ManageStudents() {
         throw new Error(data.error || 'Failed to update student');
       }
 
-      // Refetch after update
       await fetchStudents(debouncedSearch, gradeFilter);
       closeModal();
+      setSuccess('Student updated successfully');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.message);
+      setSubmitting(false); // Reset on error
     }
   };
 
-  // Handle delete
+  // Handle delete - FIXED
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) return;
+    setDeletingId(id);
 
     try {
       const res = await fetch('/api/admin/students', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id }),
+        credentials: 'same-origin'
       });
 
       if (!res.ok) {
@@ -122,10 +156,13 @@ export default function ManageStudents() {
         throw new Error(data.error || 'Failed to delete student');
       }
 
-      // Refetch after delete
       await fetchStudents(debouncedSearch, gradeFilter);
+      setSuccess('Student deleted successfully');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -139,7 +176,25 @@ export default function ManageStudents() {
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Manage Students</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Manage Students</h1>
+        <Link href="/admin/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors">
+          Back to Dashboard
+        </Link>
+      </div>
+
+      {createdMessage && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          Student created successfully!
+        </div>
+      )}
+
+      {/* FIXED: Success message in green */}
+      {success && (
+        <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          {success}
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <input
@@ -162,19 +217,21 @@ export default function ManageStudents() {
           <option value="10">Grade 10</option>
           <option value="11">Grade 11</option>
         </select>
-        <button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors"
-          onClick={() => window.location.href = '/admin/dashboard'}
+        <Link
+          href="/admin/students/create"
+          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-md transition-colors"
         >
-          Back to Dashboard
-        </button>
+          Create Student
+        </Link>
       </div>
 
-      {error ? (
+      {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
           Error: {error}
         </div>
-      ) : students.length === 0 ? (
+      )}
+
+      {students.length === 0 ? (
         <p className="text-gray-500 text-center py-8">No students found.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -218,9 +275,10 @@ export default function ManageStudents() {
                       </button>
                       <button
                         onClick={() => handleDelete(s.id)}
-                        className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-xs transition-colors"
+                        disabled={deletingId === s.id}
+                        className="bg-red-500 hover:bg-red-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs transition-colors"
                       >
-                        Delete
+                        {deletingId === s.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
                   </td>
@@ -233,8 +291,8 @@ export default function ManageStudents() {
 
       {/* Edit Modal */}
       {showModal && editingStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Edit Student</h2>
             <form onSubmit={handleEditSubmit}>
               <input type="hidden" value={editingStudent.id} />
@@ -245,7 +303,7 @@ export default function ManageStudents() {
                   type="text"
                   value={editingStudent.full_name || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, full_name: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -256,7 +314,7 @@ export default function ManageStudents() {
                   type="email"
                   value={editingStudent.email || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -265,7 +323,7 @@ export default function ManageStudents() {
                 <select
                   value={editingStudent.grade || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, grade: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select Grade</option>
@@ -283,7 +341,7 @@ export default function ManageStudents() {
                 <select
                   value={editingStudent.gender || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, gender: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select Gender</option>
@@ -298,7 +356,7 @@ export default function ManageStudents() {
                   type="date"
                   value={editingStudent.date_of_birth || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, date_of_birth: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -307,7 +365,7 @@ export default function ManageStudents() {
                 <textarea
                   value={editingStudent.address || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
               </div>
@@ -318,7 +376,7 @@ export default function ManageStudents() {
                   type="text"
                   value={editingStudent.parent_name || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, parent_name: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -328,7 +386,7 @@ export default function ManageStudents() {
                   type="url"
                   value={editingStudent.profile_photo || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, profile_photo: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://example.com/photo.jpg"
                 />
               </div>
@@ -338,7 +396,7 @@ export default function ManageStudents() {
                 <select
                   value={editingStudent.status || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, status: e.target.value })}
-                  className="w-full border rounded-md p-2"
+                  className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="active">Active</option>
@@ -351,15 +409,17 @@ export default function ManageStudents() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                  disabled={submitting}
+                  className="bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-800 px-4 py-2 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                  disabled={submitting}
+                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-md transition-colors"
                 >
-                  Save Changes
+                  {submitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
