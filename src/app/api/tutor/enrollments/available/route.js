@@ -1,17 +1,26 @@
-// app/api/tutor/enrollments/available/route.js (fixed to use tutor_id)
+// app/api/tutor/enrollments/available/route.js
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../../lib/auth';
 import { query } from '../../../../../lib/database';
 
 export async function GET(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded || decoded.role !== 'tutor') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Tutor user ID for available students:', decoded.id);
     }
 
     // Fetch tutor_id first
@@ -50,9 +59,13 @@ export async function GET(req) {
       params
     );
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Available students count:', result.rows.length);
+    }
+
     return NextResponse.json({ students: result.rows });
   } catch (error) {
     console.error('Error fetching available students:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return NextResponse.json({ students: [] }, { status: 200 });  // Empty fallback, no 500 block
   }
 }

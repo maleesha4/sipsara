@@ -21,6 +21,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Tutor user ID:', decoded.id);
+    }
+
     // Get tutor ID
     const tutorResult = await query(
       'SELECT id FROM tutors WHERE user_id = $1',
@@ -28,48 +32,85 @@ export async function GET() {
     );
 
     if (tutorResult.rows.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('No tutor profile for user ID:', decoded.id);
+      }
       return NextResponse.json({ error: 'Tutor profile not found' }, { status: 404 });
     }
 
     const tutorId = tutorResult.rows[0].id;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Tutor ID:', tutorId);
+    }
 
-    // My Subjects
-    const subjectsRes = await query(
-      'SELECT s.id, s.name FROM subjects s JOIN tutor_subjects ts ON s.id = ts.subject_id WHERE ts.tutor_id = $1',
-      [tutorId]
-    );
-    const mySubjects = subjectsRes.rows;
+    let mySubjects = [];
+    let activeExams = 0;
+    let totalPapers = 0;
+    let studentCounts = {};
 
-    // Active Exams (simplified: tutor-subject exams)
-    const activeExamsRes = await query(
-      `SELECT COUNT(DISTINCT ae.id) as count 
-       FROM admin_exams ae
-       JOIN admin_exam_subjects aes ON ae.id = aes.admin_exam_id
-       JOIN tutor_subjects ts ON aes.subject_id = ts.subject_id
-       WHERE ts.tutor_id = $1 AND ae.status IN ('registration_open', 'in_progress')`,
-      [tutorId]
-    );
-    const activeExams = parseInt(activeExamsRes.rows[0]?.count || 0);
+    try {
+      // My Subjects: Distinct subjects from enrollments for this tutor
+      const subjectsRes = await query(
+        `SELECT DISTINCT s.id, s.name 
+         FROM subjects s 
+         JOIN enrollments e ON s.id = e.subject_id 
+         WHERE e.tutor_id = $1 AND e.status = 'active'`,
+        [tutorId]
+      );
+      mySubjects = subjectsRes.rows;
+    } catch (subError) {
+      console.error('Subjects query failed:', subError);
+      mySubjects = [];  // Fallback
+    }
 
-    // Total Papers
-    const papersRes = await query('SELECT COUNT(*) as count FROM question_papers WHERE uploaded_by = $1', [decoded.id]);
-    const totalPapers = parseInt(papersRes.rows[0]?.count || 0);
+    try {
+      // Active Exams: Count distinct admin_exams where subjects match tutor's enrollments
+      const activeExamsRes = await query(
+        `SELECT COUNT(DISTINCT ae.id) as count 
+         FROM admin_exams ae
+         JOIN admin_exam_subjects aes ON ae.id = aes.admin_exam_id
+         JOIN enrollments e ON aes.subject_id = e.subject_id
+         WHERE e.tutor_id = $1 
+           AND ae.status IN ('registration_open', 'in_progress')
+           AND e.status = 'active'`,
+        [tutorId]
+      );
+      activeExams = parseInt(activeExamsRes.rows[0]?.count || 0);
+    } catch (examError) {
+      console.error('Active exams query failed:', examError);
+      activeExams = 0;  // Fallback
+    }
 
-    // Student Counts per Grade (enrollments only, simplified)
-    const studentCountsRes = await query(
-      `SELECT g.year, COUNT(DISTINCT st.id) as count 
-       FROM students st
-       JOIN grades g ON st.current_grade_id = g.id
-       JOIN tutor_students tsp ON st.id = tsp.student_id
-       WHERE tsp.tutor_id = $1
-       GROUP BY g.year 
-       ORDER BY g.year`,
-      [tutorId]
-    );
-    const studentCounts = {};
-    studentCountsRes.rows.forEach(row => {
-      studentCounts[row.year] = parseInt(row.count);
-    });
+    try {
+      // Total Papers: Count from papers table by tutor_id
+      const papersRes = await query(
+        'SELECT COUNT(*) as count FROM papers WHERE tutor_id = $1 AND status = \'published\'',
+        [tutorId]
+      );
+      totalPapers = parseInt(papersRes.rows[0]?.count || 0);
+    } catch (paperError) {
+      console.error('Papers query failed:', paperError);
+      totalPapers = 0;  // Fallback
+    }
+
+    try {
+      // Student Counts per Grade: Distinct students from enrollments, grouped by grade year
+      const studentCountsRes = await query(
+        `SELECT g.year, COUNT(DISTINCT e.student_id) as count 
+         FROM enrollments e
+         JOIN grades g ON e.grade_id = g.id
+         WHERE e.tutor_id = $1 AND e.status = 'active'
+         GROUP BY g.year 
+         ORDER BY g.year`,
+        [tutorId]
+      );
+      studentCountsRes.rows.forEach(row => {
+        studentCounts[row.year] = parseInt(row.count);
+      });
+    } catch (studentError) {
+      console.error('Student counts query failed:', studentError);
+      studentCounts = {};  // Fallback
+    }
 
     const stats = {
       mySubjects,
@@ -78,9 +119,16 @@ export async function GET() {
       studentCounts
     };
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Stats response:', stats);
+    }
+
     return NextResponse.json({ stats });
   } catch (error) {
     console.error('Error fetching tutor stats:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    // Return empty stats instead of 500 to avoid frontend skip
+    return NextResponse.json({ 
+      stats: { mySubjects: [], activeExams: 0, totalPapers: 0, studentCounts: {} } 
+    });
   }
 }

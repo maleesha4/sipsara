@@ -1,23 +1,36 @@
 // ============================================
-// FILE: app/api/tutor/marks/route.js
+// FILE: app/api/tutor/marks/route.js (FIXED - Filters by exam correctly)
 // ============================================
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
 
 export async function GET(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded || decoded.role !== 'tutor') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Tutor user ID for marks:', decoded.id);
+    }
+
     const url = new URL(req.url);
     const examId = url.searchParams.get('examId');
+
+    if (!examId) {
+      return NextResponse.json({ error: 'examId is required' }, { status: 400 });
+    }
 
     // Get tutor ID
     const tutorResult = await query(
@@ -31,15 +44,7 @@ export async function GET(req) {
 
     const tutorId = tutorResult.rows[0].id;
 
-    let whereClause = 'WHERE aest.tutor_id = $1';
-    const params = [tutorId];
-
-    if (examId) {
-      whereClause += ' AND aest.admin_exam_id = $2';
-      params.push(examId);
-    }
-
-    // Fetch choices assigned to tutor, with student details and current marks
+    // FIXED: Properly filter by exam_id through the registration
     const result = await query(`
       SELECT 
         aesc.id as choice_id,
@@ -48,30 +53,48 @@ export async function GET(req) {
         aer.admission_number,
         sub.name as subject_name,
         aem.score,
-        aem.marked_at
+        aem.marked_at,
+        ae.exam_name,
+        ae.exam_date,
+        g.grade_name
       FROM admin_exam_subject_tutors aest
-      JOIN admin_exam_student_choices aesc ON aesc.subject_id = aest.subject_id
-      JOIN admin_exam_registrations aer ON aesc.registration_id = aer.id
+      JOIN admin_exams ae ON aest.admin_exam_id = ae.id
+      JOIN grades g ON ae.grade_id = g.id
+      JOIN admin_exam_subjects aes ON aest.admin_exam_id = aes.admin_exam_id 
+        AND aest.subject_id = aes.subject_id
+      JOIN admin_exam_registrations aer ON aer.admin_exam_id = ae.id
+      JOIN admin_exam_student_choices aesc ON aesc.registration_id = aer.id 
+        AND aesc.subject_id = aes.subject_id
       JOIN students s ON aer.student_id = s.id
       JOIN users u ON s.user_id = u.id
       JOIN subjects sub ON aesc.subject_id = sub.id
       LEFT JOIN admin_exam_marks aem ON aesc.id = aem.choice_id AND aem.tutor_id = $1
-      ${whereClause}
+      WHERE aest.tutor_id = $1
+        AND aest.admin_exam_id = $2
         AND aer.status IN ('registered', 'confirmed')
       ORDER BY u.full_name ASC, sub.name ASC
-    `, params);
+    `, [tutorId, examId]);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Marks for exam ${examId}, tutor ${tutorId}:`, result.rows.length, 'choices');
+    }
 
     return NextResponse.json({ choices: result.rows });
   } catch (error) {
     console.error('Error fetching marks:', error);
-    return NextResponse.json({ error: 'Server error: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Server error', details: error.message }, { status: 500 });
   }
 }
 
 export async function POST(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded || decoded.role !== 'tutor') {
@@ -102,7 +125,22 @@ export async function POST(req) {
 
     const tutorId = tutorResult.rows[0].id;
 
-    // Upsert mark for choice
+    // Verify tutor assigned to this choice's exam/subject before saving
+    const assignmentCheck = await query(`
+      SELECT 1 
+      FROM admin_exam_student_choices aesc
+      JOIN admin_exam_registrations aer ON aesc.registration_id = aer.id
+      JOIN admin_exam_subject_tutors aest ON aer.admin_exam_id = aest.admin_exam_id 
+        AND aesc.subject_id = aest.subject_id 
+        AND aest.tutor_id = $2
+      WHERE aesc.id = $1
+    `, [choiceId, tutorId]);
+
+    if (assignmentCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'Not assigned to this exam/subject' }, { status: 403 });
+    }
+
+    // Upsert mark
     await query(`
       INSERT INTO admin_exam_marks (choice_id, tutor_id, score)
       VALUES ($1, $2, $3)
@@ -111,9 +149,13 @@ export async function POST(req) {
         marked_at = CURRENT_TIMESTAMP
     `, [choiceId, tutorId, parsedScore]);
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Mark saved: choice ${choiceId}, score ${parsedScore} by tutor ${tutorId}`);
+    }
+
     return NextResponse.json({ message: 'Mark saved successfully' });
   } catch (error) {
     console.error('Error saving mark:', error);
-    return NextResponse.json({ error: 'Server error: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
