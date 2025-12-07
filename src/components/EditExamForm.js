@@ -1,5 +1,5 @@
 // ============================================
-// FILE: components/EditExamForm.js
+// FILE: components/EditExamForm.js (FIXED DATE FORMATTING)
 // ============================================
 'use client';
 
@@ -7,20 +7,25 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+});
+
 export default function EditExamForm({ exam, allSubjects, grades, onSave, onCancel, currentSubjects, allTutors, examId }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    exam_name: exam.exam_name,
-    grade_id: exam.grade_id,
-    exam_date: exam.exam_date,
-    registration_start_date: exam.registration_start_date,
-    registration_end_date: exam.registration_end_date,
-    description: exam.description,
-    status: exam.status,
-    subject_ids: currentSubjects.map(s => s.id),
-    tutor_assignments: {} // { subject_id: tutor_id }
+    exam_name: exam.exam_name || '',
+    grade_id: exam.grade_id || '',
+    exam_date: exam.exam_date ? new Date(exam.exam_date).toISOString().split('T')[0] : '',
+    registration_start_date: exam.registration_start_date ? new Date(exam.registration_start_date).toISOString().split('T')[0] : '',
+    registration_end_date: exam.registration_end_date ? new Date(exam.registration_end_date).toISOString().split('T')[0] : '',
+    description: exam.description || '',
+    status: exam.status || 'draft',
+    subject_ids: currentSubjects.map(s => s.id)
   });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -39,9 +44,10 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
   const handleSave = async () => {
     try {
       setError('');
+      setSaving(true);
       const res = await fetch(`/api/admin/exams/${examId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           exam_name: formData.exam_name,
           grade_id: formData.grade_id,
@@ -50,9 +56,9 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
           registration_end_date: formData.registration_end_date,
           description: formData.description,
           status: formData.status,
-          subject_ids: formData.subject_ids,
-          tutor_assignments: formData.tutor_assignments
+          subject_ids: formData.subject_ids
         }),
+        credentials: 'same-origin'
       });
       if (!res.ok) {
         if (res.status === 401) {
@@ -65,13 +71,10 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
       onSave(); // Refresh parent
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSaving(false);
     }
   };
-
-  const availableTutors = allSubjects.reduce((acc, subject) => {
-    acc[subject.id] = allTutors.filter(t => t.subject_id === subject.id);
-    return acc;
-  }, {});
 
   return (
     <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -149,7 +152,8 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
           >
             <option value="draft">Draft</option>
             <option value="registration_open">Open Registration</option>
-            <option value="closed">Closed</option>
+            <option value="closed">Closed Registration</option>
+            <option value="closed">Send Admission Cards</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
             <option value="published">Published</option>
@@ -180,8 +184,13 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
         </div>
       </div>
       <div className="mt-6 flex space-x-4">
-        <button type="button" onClick={handleSave} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Save Changes
+        <button 
+          type="button" 
+          onClick={handleSave} 
+          disabled={saving}
+          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
         <button type="button" onClick={onCancel} className="bg-gray-500 text-white px-4 py-2 rounded">
           Cancel

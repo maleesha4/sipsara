@@ -33,7 +33,15 @@ export async function GET(request, { params }) {
 
     const gradeId = studentResult.rows[0].current_grade_id;
 
-    // Get exam details - FIX: Specify table aliases
+    // Await params for Next.js 15 compatibility
+    const paramsObj = await params;
+    const examId = paramsObj.examId;
+
+    if (!examId) {
+      return NextResponse.json({ error: 'Invalid exam ID' }, { status: 400 });
+    }
+
+    // Get exam details
     const examResult = await query(`
       SELECT 
         ae.id,
@@ -50,7 +58,7 @@ export async function GET(request, { params }) {
       JOIN grades g ON ae.grade_id = g.id
       WHERE ae.id = $1
         AND ae.grade_id = $2
-    `, [params.examId, gradeId]);
+    `, [examId, gradeId]);
 
     if (examResult.rows.length === 0) {
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 });

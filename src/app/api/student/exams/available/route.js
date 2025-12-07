@@ -33,7 +33,7 @@ export async function GET(request) {
 
     const student = studentResult.rows[0];
 
-    // Get available exams for student's grade
+    // Get available exams for student's grade (only those with open registration period)
     const examsResult = await query(`
       SELECT 
         ae.id,
@@ -51,7 +51,9 @@ export async function GET(request) {
       JOIN grades g ON ae.grade_id = g.id
       LEFT JOIN admin_exam_subjects aes ON ae.id = aes.admin_exam_id
       WHERE ae.grade_id = $1
-        AND ae.status IN ('registration_open', 'in_progress', 'completed', 'published')
+        AND ae.status = 'registration_open'
+        AND ae.registration_start_date <= CURRENT_DATE
+        AND ae.registration_end_date >= CURRENT_DATE
       GROUP BY ae.id, g.grade_name
       ORDER BY ae.exam_date DESC
     `, [student.current_grade_id]);

@@ -1,5 +1,5 @@
 // ============================================
-// FILE: app/api/admin/exams/route.js
+// FILE: app/api/admin/exams/route.js (FIXED)
 // ============================================
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -16,10 +16,8 @@ export async function GET() {
 
     const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
-    console.log('Exams API - Decoded user:', user ? { id: user.id, role: user.role } : 'null'); // Debug log
 
     if (!user || user.role !== 'admin') {
-      console.log('Unauthorized access to exams list');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -35,7 +33,7 @@ export async function GET() {
         ae.published_at,
         ae.created_at,
         g.grade_name,
-        COUNT(aer.id) as registration_count
+        COUNT(DISTINCT aer.id) as registration_count
       FROM admin_exams ae
       LEFT JOIN grades g ON ae.grade_id = g.id
       LEFT JOIN admin_exam_registrations aer ON ae.id = aer.admin_exam_id
@@ -43,7 +41,6 @@ export async function GET() {
       ORDER BY ae.created_at DESC
     `);
 
-    console.log('Exams fetched:', result.rows.length); // Debug log
     return NextResponse.json({ exams: result.rows });
   } catch (error) {
     console.error('Error fetching exams:', error);
@@ -61,10 +58,8 @@ export async function POST(request) {
 
     const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
-    console.log('Exams POST - Decoded user:', user ? { id: user.id, role: user.role } : 'null'); // Debug log
 
     if (!user || user.role !== 'admin') {
-      console.log('Unauthorized access to create exam');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -72,16 +67,24 @@ export async function POST(request) {
     const { exam_name, grade_ids, exam_date, registration_start_date, registration_end_date, description, subject_ids, status } = body;
     
     // Validation
+    if (!exam_name || !grade_ids || grade_ids.length === 0) {
+      return NextResponse.json({ error: 'Exam name and grade are required' }, { status: 400 });
+    }
+
+    if (!subject_ids || subject_ids.length === 0) {
+      return NextResponse.json({ error: 'At least one subject is required' }, { status: 400 });
+    }
+
     const startDate = new Date(registration_start_date);
     const endDate = new Date(registration_end_date);
     const examD = new Date(exam_date);
 
-    if (endDate <= startDate || examD <= endDate) {
-      return NextResponse.json({ error: 'Invalid dates' }, { status: 400 });
+    if (endDate <= startDate) {
+      return NextResponse.json({ error: 'Registration end date must be after start date' }, { status: 400 });
     }
 
-    if (!grade_ids || grade_ids.length === 0 || !subject_ids || subject_ids.length === 0) {
-      return NextResponse.json({ error: 'Grades and subjects required' }, { status: 400 });
+    if (examD <= endDate) {
+      return NextResponse.json({ error: 'Exam date must be after registration end date' }, { status: 400 });
     }
 
     // Get admin ID from admins table
@@ -102,7 +105,7 @@ export async function POST(request) {
 
     const examId = examResult.rows[0].id;
 
-    // Insert subjects (your schema uses admin_exam_subjects)
+    // Insert subjects
     for (const subjectId of subject_ids) {
       await query(
         `INSERT INTO admin_exam_subjects (admin_exam_id, subject_id) 

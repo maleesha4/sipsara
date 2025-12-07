@@ -197,10 +197,6 @@ export default function AdminDashboardClient() {
             <h3 className="text-lg font-semibold mb-2">Active Exams</h3>
             <p className="text-4xl font-bold">{stats.activeExams}</p>
           </div>
-          <div className="bg-red-500 text-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-2">Pending Registrations</h3>
-            <p className="text-4xl font-bold">{stats.pendingRegistrations}</p>
-          </div>
         </div>
 
         {/* Quick Actions */}

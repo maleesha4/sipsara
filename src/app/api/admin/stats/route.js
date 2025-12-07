@@ -52,7 +52,6 @@ export async function GET() {
         totalTutors: Number(tutorsRes.rows[0].count) || 0,
         totalExams: Number(examsRes.rows[0].count) || 0,
         activeExams: Number(activeExamsRes.rows[0].count) || 0,
-        pendingRegistrations: Number(pendingRegsRes.rows[0].count) || 0
       }
     });
 
