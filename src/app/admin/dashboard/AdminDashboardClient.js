@@ -172,7 +172,7 @@ export default function AdminDashboardClient() {
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-5 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="bg-blue-500 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Total Students</h3>
             <div className="text-lg space-y-1">

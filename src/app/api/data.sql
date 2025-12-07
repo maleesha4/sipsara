@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS admin_exams (
     exam_date DATE NOT NULL,
     registration_start_date DATE NOT NULL,
     registration_end_date DATE NOT NULL CHECK (registration_end_date > registration_start_date),
-    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'registration_open', 'closed', 'in_progress', 'completed', 'published')),
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'registration_open', 'closed', ' send_admission_cards','in_progress', 'completed', 'published')),
     description TEXT,
     created_by INT NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     published_at TIMESTAMP,
@@ -169,11 +169,14 @@ CREATE INDEX IF NOT EXISTS idx_admin_exams_grade_status ON admin_exams(grade_id,
 CREATE INDEX IF NOT EXISTS idx_admin_exams_dates ON admin_exams(exam_date, registration_start_date, registration_end_date);
 CREATE INDEX IF NOT EXISTS idx_admin_exams_published ON admin_exams(published_at);
 
--- Admin Exam Subjects (junction)
+-- Admin Exam Subjects (junction) - Updated with date, start_time, and end_time
 CREATE TABLE IF NOT EXISTS admin_exam_subjects (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     admin_exam_id INT NOT NULL REFERENCES admin_exams(id) ON DELETE CASCADE,
     subject_id INT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    exam_date DATE NOT NULL,
+    start_time TIME NOT NULL DEFAULT '09:00:00',
+    end_time TIME NOT NULL DEFAULT '11:00:00',
     UNIQUE(admin_exam_id, subject_id)
 );
 CREATE INDEX IF NOT EXISTS idx_admin_exam_subjects_exam ON admin_exam_subjects(admin_exam_id);
