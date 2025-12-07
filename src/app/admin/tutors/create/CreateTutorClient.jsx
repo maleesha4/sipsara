@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/admin/tutors/create/page.jsx (CreateTutor)
+// NEW FILE: src/app/admin/tutors/create/CreateTutorClient.jsx
 // ============================================
 'use client';
 
@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function CreateTutor() {
+export default function CreateTutorClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
