@@ -1,6 +1,4 @@
 // app/login/page.js
-'use client';
-
 import LoginForm from './LoginForm';
 
 export default function LoginPage() {

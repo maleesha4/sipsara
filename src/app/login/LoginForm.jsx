@@ -1,5 +1,6 @@
 // app/login/LoginForm.jsx
 'use client';
+
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -10,11 +11,12 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [formData, setFormData] = useState({ fullName: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [successMessage, setSuccessMessage] = useState(''); // State for success notification
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -23,6 +25,19 @@ function LoginContent() {
       ...(token && { Authorization: `Bearer ${token}` })
     };
   };
+
+  // Check for registration success and show notification
+  useEffect(() => {
+    const registered = searchParams.get('registered');
+    if (registered === 'true') {
+      setSuccessMessage('Registration successful! Please login.');
+      // Clear the query param after showing the message
+      const timer = setTimeout(() => {
+        router.replace('/login');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -103,9 +118,10 @@ function LoginContent() {
 
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">Login</h1>
 
-        {searchParams.get('registered') && (
+        {/* Success Notification */}
+        {successMessage && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            Registration successful! Please login.
+            {successMessage}
           </div>
         )}
 
@@ -116,15 +132,15 @@ function LoginContent() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Full Name */}
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium mb-1">සම්පූර්ණ නම</label>
+            <label className="block text-sm font-medium mb-1">Email ලිපිනය</label>
             <input
-              type="text"
+              type="email"
               required
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
@@ -180,7 +196,7 @@ function LoginContent() {
 
 export default function LoginFormWrapper() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-100"><p>Loading...</p></div>}>
       <LoginContent />
     </Suspense>
   );
