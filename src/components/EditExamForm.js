@@ -1,5 +1,5 @@
 // ============================================
-// FILE: components/EditExamForm.js (FIXED DATE FORMATTING)
+// FILE: components/EditExamForm.js (UPDATED STATUS OPTIONS)
 // ============================================
 'use client';
 
@@ -22,7 +22,16 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
     registration_end_date: exam.registration_end_date ? new Date(exam.registration_end_date).toISOString().split('T')[0] : '',
     description: exam.description || '',
     status: exam.status || 'draft',
-    subject_ids: currentSubjects.map(s => s.id)
+    subject_ids: (exam.subjects || currentSubjects).map(s => s.subject_id || s.id),
+    subject_details: (exam.subjects || currentSubjects).reduce((acc, s) => {
+      const subjectId = s.subject_id || s.id;
+      acc[subjectId] = { 
+        exam_date: s.exam_date ? new Date(s.exam_date).toISOString().split('T')[0] : (exam.exam_date ? new Date(exam.exam_date).toISOString().split('T')[0] : ''), 
+        start_time: s.start_time ? s.start_time.slice(0, 5) : '09:00', 
+        end_time: s.end_time ? s.end_time.slice(0, 5) : '10:00' 
+      };
+      return acc;
+    }, {})
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -33,11 +42,34 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
   };
 
   const handleSubjectChange = (subjectId) => {
+    const isSelected = formData.subject_ids.includes(subjectId);
+    let newSubjectIds;
+    if (isSelected) {
+      newSubjectIds = formData.subject_ids.filter(id => id !== subjectId);
+      const newDetails = { ...formData.subject_details };
+      delete newDetails[subjectId];
+      setFormData(prev => ({ ...prev, subject_ids: newSubjectIds, subject_details: newDetails }));
+    } else {
+      newSubjectIds = [...formData.subject_ids, subjectId];
+      const defaultDate = formData.exam_date || new Date().toISOString().split('T')[0];
+      setFormData(prev => ({
+        ...prev,
+        subject_ids: newSubjectIds,
+        subject_details: { 
+          ...prev.subject_details, 
+          [subjectId]: { exam_date: defaultDate, start_time: '09:00', end_time: '10:00' } 
+        }
+      }));
+    }
+  };
+
+  const handleSubjectDetailChange = (subjectId, field, value) => {
     setFormData(prev => ({
       ...prev,
-      subject_ids: prev.subject_ids.includes(subjectId)
-        ? prev.subject_ids.filter(id => id !== subjectId)
-        : [...prev.subject_ids, subjectId]
+      subject_details: {
+        ...prev.subject_details,
+        [subjectId]: { ...prev.subject_details[subjectId], [field]: value }
+      }
     }));
   };
 
@@ -56,7 +88,8 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
           registration_end_date: formData.registration_end_date,
           description: formData.description,
           status: formData.status,
-          subject_ids: formData.subject_ids
+          subject_ids: formData.subject_ids,
+          subject_details: formData.subject_details
         }),
         credentials: 'same-origin'
       });
@@ -152,8 +185,8 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
           >
             <option value="draft">Draft</option>
             <option value="registration_open">Open Registration</option>
-            <option value="closed">Closed Registration</option>
-            <option value="closed">Send Admission Cards</option>
+            <option value="closed">Close Registration</option>
+            <option value="send_admission_cards">Send Admission Cards</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
             <option value="published">Published</option>
@@ -161,22 +194,52 @@ export default function EditExamForm({ exam, allSubjects, grades, onSave, onCanc
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Subjects *
+            Select Subjects * (with Date, Start/End Times)
           </label>
-          <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 p-4 rounded-lg">
+          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 p-4 rounded-lg">
             {allSubjects.length > 0 ? (
-              allSubjects.map(subject => (
-                <label key={subject.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    value={subject.id}
-                    checked={formData.subject_ids.includes(subject.id)}
-                    onChange={(e) => handleSubjectChange(subject.id)}
-                    className="mr-2"
-                  />
-                  <span className="text-gray-700">{subject.name}</span>
-                </label>
-              ))
+              allSubjects.map(subject => {
+                const isSelected = formData.subject_ids.includes(subject.id);
+                const details = formData.subject_details[subject.id] || { 
+                  exam_date: formData.exam_date || new Date().toISOString().split('T')[0], 
+                  start_time: '09:00', 
+                  end_time: '10:00' 
+                };
+                return (
+                  <div key={subject.id} className="flex items-center space-x-2 p-2 border rounded bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleSubjectChange(subject.id)}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-700 flex-1 font-medium">{subject.name}</span>
+                    {isSelected && (
+                      <>
+                        <input
+                          type="date"
+                          value={details.exam_date}
+                          onChange={(e) => handleSubjectDetailChange(subject.id, 'exam_date', e.target.value)}
+                          className="w-28 p-1 border rounded text-sm"
+                        />
+                        <input
+                          type="time"
+                          value={details.start_time}
+                          onChange={(e) => handleSubjectDetailChange(subject.id, 'start_time', e.target.value)}
+                          className="w-20 p-1 border rounded text-sm"
+                        />
+                        <span className="text-gray-500 text-sm">-</span>
+                        <input
+                          type="time"
+                          value={details.end_time}
+                          onChange={(e) => handleSubjectDetailChange(subject.id, 'end_time', e.target.value)}
+                          className="w-20 p-1 border rounded text-sm"
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p className="text-gray-500">No subjects available</p>
             )}

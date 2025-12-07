@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/student/dashboard/DashboardClient.js
+// FILE: src/app/student/dashboard/DashboardClient.js (UPDATED WITH BUTTON STATE CHANGE)
 // ============================================
 'use client';
 
@@ -9,6 +9,7 @@ import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
 import ChangePasswordModal from '../../../components/ChangePasswordModal';
+import AdmissionCardGenerator from '../../../components/AdmissionCardGenerator';
 
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('auth_token')}`
@@ -20,10 +21,13 @@ export default function DashboardClient() {
   const [user, setUser] = useState(null);
   const [exams, setExams] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [downloadedIds, setDownloadedIds] = useState(new Set()); // Track downloaded registrations
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showAdmissionModal, setShowAdmissionModal] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -106,6 +110,31 @@ export default function DashboardClient() {
     } catch (err) {
       return 'Invalid Date';
     }
+  };
+
+  const openAdmissionModal = async (reg) => {
+    try {
+      const res = await fetch(`/api/student/registrations/${reg.id}`, { headers: getAuthHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedRegistration(data.registration);
+        setShowAdmissionModal(true);
+      } else {
+        console.error('Failed to fetch registration details');
+        // Fallback to basic reg if fetch fails
+        setSelectedRegistration(reg);
+        setShowAdmissionModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching detailed registration:', error);
+      // Fallback to basic reg if fetch fails
+      setSelectedRegistration(reg);
+      setShowAdmissionModal(true);
+    }
+  };
+
+  const handleDownloadComplete = (regId) => {
+    setDownloadedIds(prev => new Set([...prev, regId]));
   };
 
   if (loading) {
@@ -250,7 +279,8 @@ export default function DashboardClient() {
                 {registrations.slice(0, 3).map(reg => (
                   <div key={reg.id} className="border-l-4 border-green-500 pl-4 bg-green-50 p-3 rounded">
                     <h3 className="font-semibold text-green-900">{reg.exam_name}</h3>
-                    <p className="text-sm text-gray-600">Status: <span className="font-semibold capitalize">{reg.status}</span></p>
+                    <p className="text-sm text-gray-600">Status: <span className="font-semibold capitalize">{reg.registration_status}</span></p>
+                    <p className="text-sm text-gray-600">Exam Status: <span className="font-semibold capitalize">{reg.exam_status}</span></p>
                     <p className="text-sm text-gray-600">Admission: <span className="font-mono font-bold">{reg.admission_number}</span></p>
                     <p className="text-sm text-gray-600 mb-2">
                       <span className="font-semibold">Subjects:</span>
@@ -265,6 +295,22 @@ export default function DashboardClient() {
                       </div>
                     ) : (
                       <p className="text-xs text-gray-600">No subjects selected</p>
+                    )}
+                    {reg.exam_status === 'send_admission_cards' && (
+                      <button
+                        onClick={() => openAdmissionModal(reg)}
+                        disabled={downloadedIds.has(reg.id)}
+                        className={`mt-2 px-4 py-1 rounded transition text-sm font-semibold ${
+                          downloadedIds.has(reg.id)
+                            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        {downloadedIds.has(reg.id) 
+                          ? '✅ Admission Card Downloaded' 
+                          : '📄 View & Download Admission Card'
+                        }
+                      </button>
                     )}
                   </div>
                 ))}
@@ -296,6 +342,17 @@ export default function DashboardClient() {
         onClose={() => setShowPasswordModal(false)}
         user={user}
       />
+
+      {showAdmissionModal && selectedRegistration && (
+        <AdmissionCardGenerator 
+          registration={selectedRegistration} 
+          onClose={() => {
+            setShowAdmissionModal(false);
+            setSelectedRegistration(null);
+          }}
+          onDownload={() => handleDownloadComplete(selectedRegistration.id)} // New prop to notify on download
+        />
+      )}
     </div>
   );
 }
