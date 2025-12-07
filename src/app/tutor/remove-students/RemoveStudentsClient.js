@@ -13,8 +13,27 @@ export default function RemoveStudentsClient() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [error, setError] = useState('');
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  };
+
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      window.location.href = '/login';  // Redirect if no token
+      return;
+    }
     loadData();
+  }, []);  // Initial load only
+
+  // Debounced load for filters (run on change, but not on mount)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchName || selectedGrade) loadData();
+    }, 300);  // Debounce 300ms
+    return () => clearTimeout(timer);
   }, [searchName, selectedGrade]);
 
   const loadData = async () => {
@@ -34,9 +53,25 @@ export default function RemoveStudentsClient() {
   };
 
   const fetchUser = async () => {
-    const res = await fetch('/api/auth/me');
-    const data = await res.json();
-    setUser(data.user);
+    try {
+      const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login';
+        return;
+      }
+      const data = await res.json();
+      if (data.user?.role !== 'tutor') {
+        setError('Access denied: Tutor role required.');
+        setTimeout(() => window.location.href = '/login', 1500);
+        return;
+      }
+      setUser(data.user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
   };
 
   const fetchEnrollments = async () => {
@@ -46,27 +81,33 @@ export default function RemoveStudentsClient() {
       if (searchName) params.append('name', searchName);
       if (selectedGrade) params.append('grade', selectedGrade);
       if (params.toString()) url += `?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch enrollments');
+      const res = await fetch(url, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch enrollments');
+      }
       const data = await res.json();
       setEnrollments(data.enrollments || []);
     } catch (error) {
       console.error('Error fetching enrollments:', error);
-      setError('Failed to fetch enrolled students.');
+      setError(error.message);
+      setEnrollments([]);  // Clear on error
     }
   };
 
   const handleUnenroll = async (enrollmentId) => {
-    if (!confirm('Unenroll this student?')) return;
+    if (!confirm('Are you sure you want to unenroll this student? This action cannot be undone.')) return;
     try {
       const res = await fetch(`/api/tutor/enrollments/${enrollmentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Unenroll failed');
       }
       await loadData();  // Reload all
+      setError('');  // Clear errors on success
     } catch (error) {
       console.error('Error unenrolling student:', error);
       setError(error.message);
@@ -119,12 +160,22 @@ export default function RemoveStudentsClient() {
             <option value="10">Grade 10</option>
             <option value="11">Grade 11</option>
           </select>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            Search
+          </button>
         </div>
 
         {enrollments.length === 0 ? (
-          <p className="text-gray-500">No enrolled students to remove.</p>
+          <p className="text-gray-500">No enrolled students found. Try adjusting filters or add some first.</p>
         ) : (
           <div className="bg-white rounded-lg shadow">
+            <div className="px-4 py-2 bg-gray-50 border-b">
+              <p className="text-sm text-gray-600">Found {enrollments.length} enrolled students</p>
+            </div>
             <ul className="divide-y">
               {enrollments.map((enr) => (
                 <li key={enr.id} className="p-4 flex justify-between items-center">
@@ -134,7 +185,8 @@ export default function RemoveStudentsClient() {
                   </div>
                   <button
                     onClick={() => handleUnenroll(enr.id)}
-                    className="bg-red-500 text-white px-4 py-2 rounded text-sm"
+                    disabled={loading}
+                    className="bg-red-500 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
                   >
                     Unenroll
                   </button>

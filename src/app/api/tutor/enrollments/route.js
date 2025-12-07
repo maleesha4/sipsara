@@ -1,17 +1,26 @@
-// app/api/tutor/enrollments/route.js (fixed to use tutor_id instead of user_id)
+// app/api/tutor/enrollments/route.js
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../lib/auth';
 import { query } from '../../../../lib/database';
 
 export async function GET(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded || decoded.role !== 'tutor') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Tutor user ID for enrollments:', decoded.id);
     }
 
     // Fetch tutor_id first
@@ -54,14 +63,19 @@ export async function GET(req) {
     return NextResponse.json({ enrollments: result.rows });
   } catch (error) {
     console.error('Error fetching enrollments:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return NextResponse.json({ enrollments: [] }, { status: 200 });  // Empty fallback
   }
 }
 
 export async function POST(req) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded || decoded.role !== 'tutor') {
@@ -96,20 +110,25 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Tutor subject not assigned' }, { status: 400 });
     }
 
-    // Check if already enrolled
+    // Check if already enrolled (for this tutor, subject, grade)
     const existing = await query(
-      'SELECT id FROM enrollments WHERE student_id = $1 AND subject_id = $2 AND grade_id = $3 AND status = \'active\'',
-      [studentId, subjectId, gradeId]
+      'SELECT id FROM enrollments WHERE student_id = $1 AND subject_id = $2 AND grade_id = $3 AND tutor_id = $4 AND status = \'active\'',
+      [studentId, subjectId, gradeId, tutorId]
     );
     if (existing.rows.length > 0) {
-      return NextResponse.json({ error: 'Student already enrolled' }, { status: 400 });
+      return NextResponse.json({ error: 'Student already enrolled in this subject and grade' }, { status: 400 });
     }
 
+    // Insert
     await query(
       `INSERT INTO enrollments (student_id, subject_id, tutor_id, grade_id)
        VALUES ($1, $2, $3, $4)`,
       [studentId, subjectId, tutorId, gradeId]
     );
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Enrolled student ${studentId} for tutor ${tutorId} in grade ${grade}`);
+    }
 
     return NextResponse.json({ message: 'Student enrolled successfully' });
   } catch (error) {

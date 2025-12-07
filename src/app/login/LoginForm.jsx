@@ -1,5 +1,6 @@
 // app/login/LoginForm.jsx
 'use client';
+
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -180,7 +181,7 @@ function LoginContent() {
 
 export default function LoginFormWrapper() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-100"><p>Loading...</p></div>}>
       <LoginContent />
     </Suspense>
   );

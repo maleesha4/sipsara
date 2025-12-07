@@ -13,8 +13,27 @@ export default function AddStudentsClient() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [error, setError] = useState('');
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  };
+
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      window.location.href = '/login';  // Redirect if no token
+      return;
+    }
     loadData();
+  }, []);  // Initial load only
+
+  // Debounced load for filters (run on change, but not on mount)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchName || selectedGrade) loadData();
+    }, 300);  // Debounce 300ms
+    return () => clearTimeout(timer);
   }, [searchName, selectedGrade]);
 
   const loadData = async () => {
@@ -34,9 +53,25 @@ export default function AddStudentsClient() {
   };
 
   const fetchUser = async () => {
-    const res = await fetch('/api/auth/me');
-    const data = await res.json();
-    setUser(data.user);
+    try {
+      const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        localStorage.removeItem('auth_token');
+        window.location.href = '/login';
+        return;
+      }
+      const data = await res.json();
+      if (data.user?.role !== 'tutor') {
+        setError('Access denied: Tutor role required.');
+        setTimeout(() => window.location.href = '/login', 1500);
+        return;
+      }
+      setUser(data.user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
   };
 
   const fetchAvailableStudents = async () => {
@@ -46,28 +81,40 @@ export default function AddStudentsClient() {
       if (searchName) params.append('name', searchName);
       if (selectedGrade) params.append('grade', selectedGrade);
       if (params.toString()) url += `?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch available students');
+      const res = await fetch(url, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch available students');
+      }
       const data = await res.json();
       setAvailableStudents(data.students || []);
     } catch (error) {
       console.error('Error fetching available students:', error);
-      setError('Failed to fetch available students.');
+      setError(error.message);
+      setAvailableStudents([]);  // Clear on error
     }
   };
 
   const handleEnroll = async (studentId) => {
+    if (!selectedGrade) {
+      setError('Please select a grade before enrolling.');
+      return;
+    }
     try {
       const res = await fetch('/api/tutor/enrollments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({ studentId, grade: selectedGrade })
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Enrollment failed');
       }
-      await loadData();  // Reload all
+      await loadData();  // Reload
+      setError('');  // Clear errors on success
     } catch (error) {
       console.error('Error enrolling student:', error);
       setError(error.message);
@@ -120,12 +167,22 @@ export default function AddStudentsClient() {
             <option value="10">Grade 10</option>
             <option value="11">Grade 11</option>
           </select>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            Search
+          </button>
         </div>
 
         {availableStudents.length === 0 ? (
-          <p className="text-gray-500">No available students.</p>
+          <p className="text-gray-500">No available students found. Try adjusting filters.</p>
         ) : (
           <div className="bg-white rounded-lg shadow">
+            <div className="px-4 py-2 bg-gray-50 border-b">
+              <p className="text-sm text-gray-600">Found {availableStudents.length} students</p>
+            </div>
             <ul className="divide-y">
               {availableStudents.map((student) => (
                 <li key={student.id} className="p-4 flex justify-between items-center">
@@ -135,7 +192,8 @@ export default function AddStudentsClient() {
                   </div>
                   <button
                     onClick={() => handleEnroll(student.id)}
-                    className="bg-green-500 text-white px-4 py-2 rounded text-sm"
+                    disabled={loading}
+                    className="bg-green-500 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
                   >
                     Enroll
                   </button>

@@ -12,81 +12,140 @@ export default function MarksClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const examId = searchParams.get('examId');
-  const [choices, setChoices] = useState([]);  // List of {choice_id, student_name, admission_number, subject_name, score, marked_at}
+  const [choices, setChoices] = useState([]);  // List of {choice_id, student_name, admission_number, subject_name, score, marked_at, exam_name, ...}
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [activeExam, setActiveExam] = useState(null);  // {id, name}
+  const [activeExam, setActiveExam] = useState(null);  // {id, name, date, grade_name}
   const [availableExams, setAvailableExams] = useState([]);  // Fallback list if no examId
+  const [examsLoaded, setExamsLoaded] = useState(false);
   const [editingChoice, setEditingChoice] = useState(null);  // choice_id in edit mode
+  const [pendingScores, setPendingScores] = useState({});  // {choice_id: scoreStr}
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');  // For save feedback
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  };
 
   useEffect(() => {
-    fetchUser();
-    if (examId) {
-      fetchChoices(examId);
-    } else {
-      fetchAvailableExams();
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
     }
+    fetchUser();
+    fetchAvailableExams();
+  }, []);  // Run once on mount
+
+  useEffect(() => {
+    if (examId && examsLoaded) {
+      fetchChoices(examId);
+    }
+  }, [examId, examsLoaded]);
+
+  useEffect(() => {
+    setEditingChoice(null);
+    setPendingScores({});
   }, [examId]);
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
+      const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        localStorage.removeItem('auth_token');
+        router.push('/login');
+        return;
       }
+      const data = await res.json();
+      if (data.user?.role !== 'tutor') {
+        setError('Access denied: Tutor role required.');
+        setTimeout(() => router.push('/login'), 1500);
+        return;
+      }
+      setUser(data.user);
     } catch (error) {
       console.error('Error fetching user:', error);
+      localStorage.removeItem('auth_token');
+      router.push('/login');
     }
   };
 
   const fetchChoices = async (id) => {
+    const exam = availableExams.find(e => String(e.id) === id);
+    if (!exam) {
+      setError('Selected exam not found.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setError('');
     try {
-      const res = await fetch(`/api/tutor/marks?examId=${id}`);
+      const res = await fetch(`/api/tutor/marks?examId=${id}`, { headers: getAuthHeaders() });
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to fetch choices');
       }
       const data = await res.json();
-      setChoices(data.choices || []);
-      setActiveExam({ id, name: `Exam ${id}` });  // TODO: Fetch real exam name
+      let allChoices = data.choices || [];
+      // Additional frontend filtering to ensure only the selected exam's choices are shown
+      allChoices = allChoices.filter(c => c.exam_name === exam.exam_name);
+      setChoices(allChoices);
+      setActiveExam({ 
+        id: exam.id, 
+        name: exam.exam_name, 
+        date: exam.exam_date, 
+        grade_name: exam.grade_name 
+      });
     } catch (error) {
       console.error('Error fetching choices:', error);
-      alert(error.message || 'Failed to load marks data');
+      setError(error.message || 'Failed to load marks data');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchAvailableExams = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const res = await fetch('/api/tutor/exams');
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableExams(data.exams || []);
-        if (data.exams.length > 0 && !examId) {
-          const firstExamId = data.exams[0].id;
-          router.push(`/tutor/marks?examId=${firstExamId}`);
-        }
+      const res = await fetch('/api/tutor/exams', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch exams');
       }
+      const data = await res.json();
+      setAvailableExams(data.exams || []);
+      // Removed auto-redirect to first exam to allow selection
     } catch (error) {
       console.error('Error fetching exams:', error);
+      setError(error.message || 'Failed to load available exams');
     } finally {
       setLoading(false);
+      setExamsLoaded(true);
     }
   };
 
-  const handleMarkSubmit = async (choiceId, score) => {
-    if (!score || score < 0 || score > 100) {
-      alert('Score must be between 0 and 100');
+  const handleMarkSubmit = async (choiceId, scoreStr) => {
+    setError('');
+    if (!scoreStr || scoreStr.trim() === '') {
+      setError('Score cannot be empty');
       return;
     }
-
+    const score = parseInt(scoreStr);
+    if (isNaN(score) || score < 0 || score > 100) {
+      setError('Invalid score (0-100)');
+      return;
+    }
     try {
       const res = await fetch('/api/tutor/marks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({ choiceId, score })
       });
       if (!res.ok) {
@@ -96,50 +155,102 @@ export default function MarksClient() {
       // Update local state
       setChoices(prev => prev.map(c => 
         c.choice_id === choiceId 
-          ? { ...c, score: parseInt(score), marked_at: new Date().toISOString() }
+          ? { ...c, score, marked_at: new Date().toISOString() }
           : c
       ));
+      setPendingScores(prev => {
+        const np = { ...prev };
+        delete np[choiceId];
+        return np;
+      });
       setEditingChoice(null);
-      alert('Mark updated successfully!');
+      setSuccess('Mark updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error submitting mark:', error);
-      alert(error.message || 'Failed to save mark');
+      setError(error.message || 'Failed to save mark');
     }
   };
 
   const startEditing = (choiceId) => {
+    const choice = choices.find(c => c.choice_id === choiceId);
+    setPendingScores(prev => ({
+      ...prev,
+      [choiceId]: choice?.score?.toString() || ''
+    }));
     setEditingChoice(choiceId);
   };
 
   const cancelEditing = () => {
+    const id = editingChoice;
     setEditingChoice(null);
+    setPendingScores(prev => {
+      const np = { ...prev };
+      delete np[id];
+      return np;
+    });
   };
 
   const handleBulkSave = async () => {
-    const unsavedChoices = choices.filter(c => !c.score);  // Only unsaved (no score)
-    if (unsavedChoices.length === 0) {
-      alert('No unsaved marks to add');
+    const unsavedWithPending = choices.filter(c => !c.score && pendingScores[c.choice_id] && pendingScores[c.choice_id].trim() !== '');
+    if (unsavedWithPending.length === 0) {
+      setError('No pending entries to save');
       return;
     }
 
-    // Prompt for bulk score
-    const bulkScore = prompt(`Enter score for all ${unsavedChoices.length} unsaved students (0-100):`);
-    if (bulkScore === null || bulkScore < 0 || bulkScore > 100) {
-      alert('Invalid score for bulk save');
-      return;
-    }
-
-    try {
-      for (const choice of unsavedChoices) {
-        await handleMarkSubmit(choice.choice_id, bulkScore);
+    setLoading(true);
+    setError('');
+    const promises = unsavedWithPending.map(async (choice) => {
+      const scoreStr = pendingScores[choice.choice_id];
+      const score = parseInt(scoreStr);
+      if (isNaN(score) || score < 0 || score > 100) {
+        console.warn(`Invalid score for ${choice.student_name}: ${scoreStr}`);
+        return false;
       }
-      fetchChoices(examId);  // Refresh after bulk
-    } catch (error) {
-      alert('Bulk save failed: ' + error.message);
+      try {
+        const res = await fetch('/api/tutor/marks', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+          },
+          body: JSON.stringify({ choiceId: choice.choice_id, score })
+        });
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to save mark');
+        }
+        // Update local state
+        setChoices(prev => prev.map(c => 
+          c.choice_id === choice.choice_id 
+            ? { ...c, score, marked_at: new Date().toISOString() }
+            : c
+        ));
+        // Clear pending
+        setPendingScores(prev => {
+          const np = { ...prev };
+          delete np[choice.choice_id];
+          return np;
+        });
+        return true;
+      } catch (error) {
+        console.error(`Error saving mark for ${choice.student_name}:`, error);
+        return false;
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const savedCount = results.filter(Boolean).length;
+    setLoading(false);
+    if (savedCount > 0) {
+      setSuccess(`Saved ${savedCount} marks!`);
+      setTimeout(() => setSuccess(''), 3000);
+    } else {
+      setError('No marks were saved due to errors');
     }
   };
 
-  if (loading) {
+  if (loading && !examsLoaded) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Navbar user={user} />
@@ -157,6 +268,7 @@ export default function MarksClient() {
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6">Enter Marks</h1>
+          {error && <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div>}
           <p className="text-gray-500">No exams assigned to you yet. Check with admin for assignments.</p>
           <Link href="/tutor/dashboard" className="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">
             Back to Dashboard
@@ -173,6 +285,7 @@ export default function MarksClient() {
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6">Select Exam to Enter Marks</h1>
+          {error && <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div>}
           <div className="bg-white rounded-lg shadow p-6">
             {availableExams.map(exam => (
               <div key={exam.id} className="border-b py-4 last:border-b-0">
@@ -198,24 +311,44 @@ export default function MarksClient() {
     );
   }
 
+  const pendingUnsavedCount = choices.filter(c => !c.score && pendingScores[c.choice_id] && pendingScores[c.choice_id].trim() !== '').length;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar user={user} />
       <div className="container mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+            {success}
+          </div>
+        )}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Enter Marks</h1>
           <div>
+            <Link href="/tutor/marks" className="bg-gray-500 text-white px-4 py-2 rounded mr-2">
+              Select Exam
+            </Link>
             <Link href="/tutor/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded mr-2">
               Back to Dashboard
             </Link>
-            <button onClick={() => fetchChoices(examId)} className="bg-gray-500 text-white px-4 py-2 rounded">
-              Refresh
+            <button onClick={() => fetchChoices(examId)} disabled={loading} className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50">
+              {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>
         </div>
 
         {activeExam && (
-          <p className="mb-4 text-gray-600">Exam: {activeExam.name} | <span className="font-semibold">Total Choices: {choices.length}</span></p>
+          <p className="mb-4 text-gray-600">
+            Exam: <span className="font-semibold">{activeExam.name}</span> | 
+            Date: {new Date(activeExam.date).toLocaleDateString()} | 
+            Grade: {activeExam.grade_name} | 
+            <span className="font-semibold">Total Choices: {choices.length}</span>
+          </p>
         )}
 
         {choices.length === 0 ? (
@@ -235,67 +368,77 @@ export default function MarksClient() {
                 </tr>
               </thead>
               <tbody>
-                {choices.map((choice) => (
-                  <tr key={choice.choice_id} className="border-t">
-                    <td className="px-4 py-2 font-medium">{choice.student_name}</td>
-                    <td className="px-4 py-2">{choice.admission_number}</td>
-                    <td className="px-4 py-2">{choice.subject_name}</td>
-                    <td className="px-4 py-2">
-                      {editingChoice === choice.choice_id ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={choice.score || ''}
-                          onChange={(e) => {
-                            setChoices(prev => prev.map(c => 
-                              c.choice_id === choice.choice_id ? { ...c, score: e.target.value } : c
-                            ));
-                          }}
-                          className="border rounded px-2 py-1 w-20"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className={`px-2 py-1 rounded ${choice.score ? 'bg-green-100' : 'bg-gray-100'}`}>
-                          {choice.score || 'Not Marked'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {editingChoice === choice.choice_id ? (
-                        <div className="flex gap-1">
+                {choices.map((choice) => {
+                  const choiceId = choice.choice_id;
+                  const hasSavedScore = !!choice.score;
+                  const isEditing = editingChoice === choiceId;
+                  const pendingScoreStr = pendingScores[choiceId];
+                  const inputValue = pendingScoreStr !== undefined ? pendingScoreStr : (hasSavedScore ? choice.score.toString() : '');
+                  const isValidInput = !!inputValue && inputValue.trim() !== '' && !isNaN(parseInt(inputValue)) && parseInt(inputValue) >= 0 && parseInt(inputValue) <= 100;
+
+                  return (
+                    <tr key={choiceId} className="border-t">
+                      <td className="px-4 py-2 font-medium">{choice.student_name}</td>
+                      <td className="px-4 py-2">{choice.admission_number}</td>
+                      <td className="px-4 py-2">{choice.subject_name}</td>
+                      <td className="px-4 py-2">
+                        {isEditing || !hasSavedScore ? (
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={inputValue}
+                            onChange={(e) => {
+                              setPendingScores(prev => ({ ...prev, [choiceId]: e.target.value }));
+                            }}
+                            className="border rounded px-2 py-1 w-20"
+                            autoFocus={isEditing}
+                          />
+                        ) : (
+                          <span className="px-2 py-1 rounded bg-green-100">
+                            {choice.score}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleMarkSubmit(choiceId, inputValue)}
+                              disabled={!isValidInput || loading}
+                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 disabled:opacity-50"
+                            >
+                              Update
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : hasSavedScore ? (
                           <button
-                            onClick={() => handleMarkSubmit(choice.choice_id, choice.score)}
-                            className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                            onClick={() => startEditing(choiceId)}
+                            disabled={loading}
+                            className="px-3 py-1 rounded text-sm disabled:opacity-50 bg-yellow-500 hover:bg-yellow-600 text-white"
                           >
-                            Update
+                            Edit
                           </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => startEditing(choice.choice_id)}
-                          className={`px-3 py-1 rounded text-sm ${choice.score ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                        >
-                          {choice.score ? 'Edit' : 'Add Mark'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <div className="mt-4 p-4 bg-gray-50 rounded">
               <button
                 onClick={handleBulkSave}
-                className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold"
+                disabled={loading || pendingUnsavedCount === 0}
+                className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold disabled:opacity-50"
               >
-                Add All Marks ({choices.filter(c => !c.score).length} unsaved)
+                Save All Entries ({pendingUnsavedCount} pending)
               </button>
             </div>
           </div>
