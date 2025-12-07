@@ -1,27 +1,28 @@
 // ============================================
-// FILE: app/api/admin/exams/[id]/students/route.js
+// FILE: app/api/admin/exams/[id]/students/route.js (UPDATED ADMISSION NUMBER)
 // ============================================
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../../../lib/auth';
 import { query } from '../../../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function GET(request, { params }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const paramsObj = await params;
+    const { id } = paramsObj;
     const examId = parseInt(id);
 
     // First verify the exam exists
@@ -79,6 +80,70 @@ export async function GET(request, { params }) {
     return NextResponse.json({ registrations: registrationsWithSubjects });
   } catch (error) {
     console.error('Error fetching registrations:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request, { params }) {
+  try {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const user = verifyToken(token);
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const paramsObj = await params;
+    const { id } = paramsObj;
+    const examIdInt = parseInt(id);
+
+    const body = await request.json();
+    const { student_ids } = body;
+
+    if (!Array.isArray(student_ids) || student_ids.length === 0) {
+      return NextResponse.json({ error: 'Invalid student_ids' }, { status: 400 });
+    }
+
+    // Verify exam exists
+    const examCheck = await query(
+      'SELECT id FROM admin_exams WHERE id = $1',
+      [examIdInt]
+    );
+
+    if (examCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
+    }
+
+    // Insert registrations for each student with admission_number = 25012300 + student_id
+    const insertedIds = [];
+    for (const studentId of student_ids) {
+      const studentIdInt = parseInt(studentId);
+      const admissionNumber = 25012300 + studentIdInt;
+
+      const result = await query(`
+        INSERT INTO admin_exam_registrations (admin_exam_id, student_id, admission_number, registration_date, status)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'registered')
+        ON CONFLICT (admin_exam_id, student_id) DO NOTHING
+        RETURNING id
+      `, [examIdInt, studentIdInt, admissionNumber]);
+
+      if (result.rows.length > 0) {
+        insertedIds.push(result.rows[0].id);
+      }
+    }
+
+    return NextResponse.json({ 
+      message: `Added ${insertedIds.length} students successfully`,
+      inserted_ids: insertedIds 
+    });
+  } catch (error) {
+    console.error('Error adding students:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

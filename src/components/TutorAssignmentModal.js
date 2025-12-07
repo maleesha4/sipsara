@@ -1,12 +1,17 @@
 // ============================================
-// FILE: components/TutorAssignmentModal.js
+// FILE: components/TutorAssignmentModal.js (FIXED)
 // ============================================
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function TutorAssignmentModal({ isOpen, onClose, examId, currentSubjects, allSubjects, onSave }) {
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+});
+
+export default function TutorAssignmentModal({ isOpen, onClose, examId, currentSubjects, onSave }) {
   const router = useRouter();
   const [allTutors, setAllTutors] = useState([]); // Load tutors here
   const [tutorAssignments, setTutorAssignments] = useState({});
@@ -19,7 +24,10 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
       // Fetch all tutors
       const fetchTutors = async () => {
         try {
-          const res = await fetch('/api/admin/tutors/list');
+          const res = await fetch('/api/admin/tutors', {
+            headers: getAuthHeaders(),
+            credentials: 'same-origin'
+          });
           if (res.ok) {
             const data = await res.json();
             setAllTutors(data.tutors || []);
@@ -37,7 +45,10 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
       const fetchAssignments = async () => {
         try {
           setError('');
-          const res = await fetch(`/api/admin/exams/${examId}/tutors`);
+          const res = await fetch(`/api/admin/exams/${examId}/tutors`, {
+            headers: getAuthHeaders(),
+            credentials: 'same-origin'
+          });
           console.log('Tutor assignments fetch status:', res.status); // Debug
           if (res.ok) {
             const data = await res.json();
@@ -83,8 +94,9 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
       setError('');
       const res = await fetch(`/api/admin/exams/${examId}/tutors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ tutor_assignments: tutorAssignments }),
+        credentials: 'same-origin'
       });
       if (!res.ok) {
         if (res.status === 401) {
@@ -94,7 +106,7 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to save assignments');
       }
-      onSave();
+      onSave(tutorAssignments);
       onClose();
     } catch (err) {
       setError(err.message);
@@ -105,8 +117,6 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
 
   if (!isOpen) return null;
 
-  const getTutorsForSubject = (subjectId) => allTutors.filter(t => t.subject_id === subjectId);
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
@@ -114,7 +124,6 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <div className="space-y-4 mb-6">
           {currentSubjects.map(subject => {
-            const tutorsForSubject = getTutorsForSubject(subject.id);
             const isExpanded = expandedSubjects[subject.id];
             const currentTutorId = tutorAssignments[subject.id];
             const currentTutor = allTutors.find(t => t.id === currentTutorId);
@@ -125,18 +134,18 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
                   onClick={() => toggleSubjectExpansion(subject.id)}
                   className="w-full text-left p-2 border rounded mb-2 hover:bg-gray-100"
                 >
-                  {isExpanded ? 'Hide Tutors' : `Show Available Tutors (${tutorsForSubject.length})`}
+                  {isExpanded ? 'Hide Tutors' : `Show All Tutors (${allTutors.length})`}
                 </button>
                 {isExpanded && (
                   <select
                     value={currentTutorId || ''}
-                    onChange={(e) => handleTutorChange(subject.id, e.target.value)}
+                    onChange={(e) => handleTutorChange(subject.id, e.target.value ? parseInt(e.target.value) : null)}
                     className="w-full p-2 border rounded"
                   >
                     <option value="">No Tutor Assigned</option>
-                    {tutorsForSubject.map(tutor => (
+                    {allTutors.map(tutor => (
                       <option key={tutor.id} value={tutor.id}>
-                        {tutor.full_name}
+                        {tutor.full_name} ({tutor.email})
                       </option>
                     ))}
                   </select>
@@ -145,7 +154,7 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
                   <p className="text-sm text-gray-600 mt-1">
                     Assigned: {currentTutor.full_name}
                     <button
-                      onClick={() => handleTutorChange(subject.id, '')}
+                      onClick={() => handleTutorChange(subject.id, null)}
                       className="ml-2 text-red-500 hover:text-red-700"
                     >
                       Remove
@@ -157,7 +166,7 @@ export default function TutorAssignmentModal({ isOpen, onClose, examId, currentS
           })}
         </div>
         <div className="flex gap-4 justify-end">
-          <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded">
+          <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded" disabled={loading}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={loading} className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50">

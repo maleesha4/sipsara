@@ -1,27 +1,28 @@
 // ============================================
-// FILE: app/api/admin/exams/[id]/students/[regId]/route.js
+// FILE: app/api/admin/exams/[id]/students/[regId]/route.js (FIXED)
 // ============================================
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { verifyToken } from '../../../../../../../lib/auth';
 import { query } from '../../../../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function PATCH(request, { params }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+    const token = authHeader.split(' ')[1];
     const user = verifyToken(token);
 
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { regId } = await params;
+    const paramsObj = await params;
+    const { regId } = paramsObj;
     const registrationId = parseInt(regId);
     const body = await request.json();
     const { subject_ids } = body;
