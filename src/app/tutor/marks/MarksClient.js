@@ -327,28 +327,66 @@ export default function MarksClient() {
             {success}
           </div>
         )}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Enter Marks</h1>
-          <div>
-            <Link href="/tutor/marks" className="bg-gray-500 text-white px-4 py-2 rounded mr-2">
+        <div className="flex justify-center items-center mb-6">
+          <h1 className="text-3xl font-bold text-center">Enter Marks</h1>
+        </div>
+
+        {/* Row 1: Exam name + Select Exam button */}
+        {activeExam && (
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-gray-700">
+              Exam: <span className="font-semibold">{activeExam.name}</span>
+            </p>
+
+            <Link
+              href="/tutor/marks"
+              className="bg-gray-500 text-white px-4 py-2 rounded text-center w-40"
+            >
               Select Exam
             </Link>
-            <Link href="/tutor/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded mr-2">
+          </div>
+        )}
+
+        {/* Row 2: Exam date + Back button */}
+        {activeExam && (
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-gray-700">
+              Date: {new Date(activeExam.date).toLocaleDateString()}
+            </p>
+
+            <Link
+              href="/tutor/dashboard"
+              className="bg-blue-500 text-white px-4 py-2 rounded text-center w-40"
+            >
               Back to Dashboard
             </Link>
-            <button onClick={() => fetchChoices(examId)} disabled={loading} className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-50">
+          </div>
+        )}
+
+        {/* Row 3: Grade + Refresh button */}
+        {activeExam && (
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-gray-700">
+              Grade: {activeExam.grade_name}
+            </p>
+
+            <button
+              onClick={() => fetchChoices(examId)}
+              disabled={loading}
+              className="bg-gray-500 text-white px-4 py-2 rounded text-center w-40 disabled:opacity-50"
+            >
               {loading ? 'Loading...' : 'Refresh'}
             </button>
           </div>
-        </div>
+        )}
 
+        {/* Row 4: Total choices left only */}
         {activeExam && (
-          <p className="mb-4 text-gray-600">
-            Exam: <span className="font-semibold">{activeExam.name}</span> | 
-            Date: {new Date(activeExam.date).toLocaleDateString()} | 
-            Grade: {activeExam.grade_name} | 
-            <span className="font-semibold">Total Choices: {choices.length}</span>
-          </p>
+          <div className="mb-4">
+            <p className="text-gray-700">
+              Total Choices: <span className="font-semibold">{choices.length}</span>
+            </p>
+          </div>
         )}
 
         {choices.length === 0 ? (

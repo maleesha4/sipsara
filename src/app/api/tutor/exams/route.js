@@ -57,7 +57,7 @@ export async function GET() {
       JOIN admin_exam_subject_tutors aest ON aes.admin_exam_id = aest.admin_exam_id 
         AND aes.subject_id = aest.subject_id 
         AND aest.tutor_id = $1
-      WHERE ae.status IN ('registration_open', 'send_admission_cards', 'in_progress', 'completed')
+      WHERE ae.status IN ('registration_open', 'send_admission_cards', 'in_progress', 'completed', 'published')
       ORDER BY ae.exam_date DESC
       LIMIT 5
     `, [tutorId]);
