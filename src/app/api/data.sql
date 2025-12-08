@@ -185,7 +185,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_exam_subjects_subject ON admin_exam_subject
 -- Admin Exam Registrations (students register for admin_exams)
 CREATE TABLE IF NOT EXISTS admin_exam_registrations (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    admission_number VARCHAR(8) UNIQUE,
+    admission_number VARCHAR(8),
     admin_exam_id INT NOT NULL REFERENCES admin_exams(id) ON DELETE CASCADE,
     student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

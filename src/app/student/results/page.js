@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/student/results/page.js
+// FILE: src/app/student/results/page.js (UPDATED)
 // ============================================
 'use client';
 
@@ -9,6 +9,8 @@ import Link from 'next/link';
 export default function StudentResultsPage() {
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [results, setResults] = useState(null);
+  const [exams, setExams] = useState(null);
+  const [studentName, setStudentName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +37,8 @@ export default function StudentResultsPage() {
     e.preventDefault();
     setError('');
     setResults(null);
+    setExams(null);
+    setStudentName('');
 
     if (!admissionNumber.trim()) {
       setError('Please enter your admission number');
@@ -53,7 +57,40 @@ export default function StudentResultsPage() {
       }
 
       const data = await res.json();
-      setResults(data.results);
+      if (data.exams) {
+        setExams(data.exams);
+        setStudentName(data.student_name);
+      } else if (data.results) {
+        setResults(data.results);
+      } else {
+        throw new Error('Unexpected response format');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExamSelect = async (examId) => {
+    setError('');
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/student/results?admission=${admissionNumber.trim()}&exam=${examId}`, {
+        credentials: 'same-origin'
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch results');
+      }
+
+      const data = await res.json();
+      if (data.results) {
+        setResults(data.results);
+      } else {
+        throw new Error('Unexpected response format');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -68,83 +105,14 @@ export default function StudentResultsPage() {
   const handleReset = () => {
     setAdmissionNumber('');
     setResults(null);
+    setExams(null);
+    setStudentName('');
     setError('');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {!results ? (
-        // Admission Number Form
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">View Your Results</h1>
-              <p className="text-gray-600">Enter your admission number to see your exam results</p>
-            </div>
-
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-red-700 text-sm">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="admission" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Admission Number
-                </label>
-                <input
-                  type="text"
-                  id="admission"
-                  value={admissionNumber}
-                  onChange={(e) => setAdmissionNumber(e.target.value.toUpperCase())}
-                  placeholder="Enter your admission number"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
-                  disabled={loading}
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  Example: 25012301
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !admissionNumber.trim()}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:transform-none shadow-lg"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Loading...
-                  </span>
-                ) : (
-                  'View Results'
-                )}
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <Link
-                href="/"
-                className="text-blue-600 hover:text-blue-700 text-sm font-semibold hover:underline"
-              >
-                ← Back to Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : (
+      {results ? (
         // Results Sheet - Printable
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           {/* Action Buttons - Hide on print */}
@@ -231,6 +199,10 @@ export default function StudentResultsPage() {
                   <span className="text-lg font-semibold text-gray-800">{results.exam_name}</span>
                 </div>
                 <div>
+                  <span className="text-sm text-gray-600">Exam Date: </span>
+                  <span className="text-lg font-semibold text-gray-800">{new Date(results.exam_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <div>
                   <span className="text-sm text-gray-600">Admission Number: </span>
                   <span className="text-lg font-bold text-blue-600 font-mono">{results.admission_number}</span>
                 </div>
@@ -248,7 +220,6 @@ export default function StudentResultsPage() {
                 <thead>
                   <tr className="bg-blue-600 text-white">
                     <th className="border border-gray-300 px-4 py-3 text-left">Subject</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center">Marks</th>
                     <th className="border border-gray-300 px-4 py-3 text-center">Percentage</th>
                     <th className="border border-gray-300 px-4 py-3 text-center">Grade</th>
                   </tr>
@@ -256,14 +227,11 @@ export default function StudentResultsPage() {
                 <tbody>
                   {results.subjects.map((subject, index) => {
                     const percentage = subject.score;
-                    const grade = getGrade(percentage);
+                    const grade = getGrade(percentage ?? 0);
                     return (
                       <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="border border-gray-300 px-4 py-3 font-medium">
                           {subject.subject_name}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-3 text-center font-semibold">
-                          {subject.score !== null ? subject.score : 'N/A'}
                         </td>
                         <td className="border border-gray-300 px-4 py-3 text-center font-bold">
                           {percentage !== null ? `${percentage}%` : 'N/A'}
@@ -303,6 +271,131 @@ export default function StudentResultsPage() {
                   <p className="text-xs text-gray-600">0-34%</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : exams ? (
+        // Exam Selection
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Select Exam</h1>
+              <p className="text-gray-600">Choose an exam to view your results, {studentName}</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              {exams.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => handleExamSelect(exam.id)}
+                  disabled={loading}
+                  className="w-full p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-2 border-blue-200 rounded-xl transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none shadow-md text-left"
+                >
+                  <div className="font-bold text-lg text-gray-800 mb-1">{exam.exam_name}</div>
+                  <div className="text-sm text-gray-600 flex justify-between">
+                    <span>Grade: {exam.grade_name}</span>
+                    <span>{new Date(exam.exam_date).toLocaleDateString()}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleReset}
+                disabled={loading}
+                className="text-blue-600 hover:text-blue-700 text-sm font-semibold hover:underline disabled:opacity-50"
+              >
+                ← Change Admission Number
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Admission Number Form
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">View Your Results</h1>
+              <p className="text-gray-600">Enter your admission number to see your exam results</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="admission" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Admission Number
+                </label>
+                <input
+                  type="text"
+                  id="admission"
+                  value={admissionNumber}
+                  onChange={(e) => setAdmissionNumber(e.target.value.toUpperCase())}
+                  placeholder="Enter your admission number"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
+                  disabled={loading}
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Example: 25012301
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !admissionNumber.trim()}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 disabled:transform-none shadow-lg"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Loading...
+                  </span>
+                ) : (
+                  'View Results'
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <Link
+                href="/"
+                className="text-blue-600 hover:text-blue-700 text-sm font-semibold hover:underline"
+              >
+                ← Back to Home
+              </Link>
             </div>
           </div>
         </div>

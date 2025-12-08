@@ -6,6 +6,38 @@ import { headers } from 'next/headers';
 import { verifyToken } from '../../../../../lib/auth';
 import { query } from '../../../../../lib/database';
 
+const fetchExamWithSubjects = async (id) => {
+  const result = await query(`
+    SELECT 
+      ae.*,
+      g.grade_name,
+      json_agg(
+        json_build_object(
+          'id', s.id,
+          'name', s.name,
+          'subject_id', aes.subject_id,
+          'exam_date', aes.exam_date,
+          'start_time', aes.start_time,
+          'end_time', aes.end_time
+        )
+      ) FILTER (WHERE aes.subject_id IS NOT NULL) AS subjects
+    FROM admin_exams ae
+    LEFT JOIN grades g ON ae.grade_id = g.id
+    LEFT JOIN admin_exam_subjects aes ON ae.id = aes.admin_exam_id
+    LEFT JOIN subjects s ON aes.subject_id = s.id
+    WHERE ae.id = $1
+    GROUP BY ae.id, g.grade_name
+  `, [id]);
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const exam = result.rows[0];
+  exam.subjects = exam.subjects || [];
+  return exam;
+};
+
 export async function GET(request, { params }) {
   try {
     const headersList = await headers();
@@ -31,21 +63,13 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    const result = await query(`
-      SELECT 
-        ae.*,
-        g.grade_name
-      FROM admin_exams ae
-      LEFT JOIN grades g ON ae.grade_id = g.id
-      WHERE ae.id = $1
-    `, [id]);
+    const exam = await fetchExamWithSubjects(id);
 
-    if (result.rows.length === 0) {
+    if (!exam) {
       console.log('Exam not found for ID:', id);
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
     }
 
-    const exam = result.rows[0];
     console.log('Exam data:', exam); // Log the fetched exam data
     return NextResponse.json({ exam });
   } catch (error) {
@@ -135,13 +159,26 @@ export async function PATCH(request, { params }) {
     if (body.subject_ids && Array.isArray(body.subject_ids) && body.subject_ids.length > 0) {
       // Delete old
       await query('DELETE FROM admin_exam_subjects WHERE admin_exam_id = $1', [id]);
-      // Insert new
+      // Insert new with details
       for (const subjectId of body.subject_ids) {
-        await query('INSERT INTO admin_exam_subjects (admin_exam_id, subject_id) VALUES ($1, $2)', [id, subjectId]);
+        const details = body.subject_details?.[subjectId] || {};
+        await query(
+          'INSERT INTO admin_exam_subjects (admin_exam_id, subject_id, exam_date, start_time, end_time) VALUES ($1, $2, $3, $4, $5)',
+          [
+            id,
+            subjectId,
+            details.exam_date || body.exam_date,
+            details.start_time || '09:00:00',
+            details.end_time || '11:00:00'
+          ]
+        );
       }
     }
 
-    return NextResponse.json({ success: true, exam: result.rows[0] });
+    // Refetch the full exam with subjects
+    const updatedExam = await fetchExamWithSubjects(id);
+
+    return NextResponse.json({ success: true, exam: updatedExam });
   } catch (error) {
     console.error('Error updating exam:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
