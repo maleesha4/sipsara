@@ -216,6 +216,11 @@ export default function AdminDashboardClient() {
             <h3 className="font-semibold text-lg">Manage Tutors</h3>
             <p className="text-gray-600 text-sm">View & edit tutors</p>
           </Link>
+          <Link href="/admin/results" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div className="text-white text-4xl mb-2">📊</div>
+            <h3 className="font-semibold text-lg">Exam Results</h3>
+            <p className="text-gray-600 text-sm">View all exam results</p>
+          </Link>
           <Link href="/admin/reports" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div className="text-orange-600 text-4xl mb-2">📊</div>
             <h3 className="font-semibold text-lg">Reports</h3>
