@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/student/dashboard/DashboardClient.js (UPDATED WITH BUTTON STATE CHANGE)
+// FILE: src/app/student/dashboard/DashboardClient.js (WITH LOADING BUTTON STATE)
 // ============================================
 'use client';
 
@@ -21,13 +21,16 @@ export default function DashboardClient() {
   const [user, setUser] = useState(null);
   const [exams, setExams] = useState([]);
   const [registrations, setRegistrations] = useState([]);
-  const [downloadedIds, setDownloadedIds] = useState(new Set()); // Track downloaded registrations
+  const [downloadedIds, setDownloadedIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
+
+  // NEW: Loading state for the admission button
+  const [loadingRegId, setLoadingRegId] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -36,7 +39,6 @@ export default function DashboardClient() {
       return;
     }
 
-    // Check for success message from query params
     const success = searchParams.get('success');
     const admission = searchParams.get('admission');
     
@@ -53,25 +55,21 @@ export default function DashboardClient() {
 
   const fetchData = async () => {
     try {
-      // Get user info
       const userRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
       if (!userRes.ok) {
         localStorage.removeItem('auth_token');
-        console.error('Unauthorized access');
         router.push('/login?error=unauthorized');
         return;
       }
       const userData = await userRes.json();
       setUser(userData.user);
 
-      // Get available exams
       const examsRes = await fetch('/api/student/exams/available', { headers: getAuthHeaders() });
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setExams(examsData.exams || []);
       }
 
-      // Get my registrations
       const regsRes = await fetch('/api/student/registrations', { headers: getAuthHeaders() });
       if (regsRes.ok) {
         const regsData = await regsRes.json();
@@ -87,7 +85,6 @@ export default function DashboardClient() {
     }
   };
 
-  // Filter available exams: not registered AND registration period open
   const now = new Date();
   const availableExams = exams.filter(exam => {
     const regStart = new Date(exam.registration_start_date);
@@ -115,21 +112,23 @@ export default function DashboardClient() {
   const openAdmissionModal = async (reg) => {
     try {
       const res = await fetch(`/api/student/registrations/${reg.id}`, { headers: getAuthHeaders() });
+
+      let detailedReg = reg;
       if (res.ok) {
         const data = await res.json();
-        setSelectedRegistration(data.registration);
-        setShowAdmissionModal(true);
-      } else {
-        console.error('Failed to fetch registration details');
-        // Fallback to basic reg if fetch fails
-        setSelectedRegistration(reg);
-        setShowAdmissionModal(true);
+        detailedReg = data.registration;
       }
+
+      setSelectedRegistration(detailedReg);
+      setShowAdmissionModal(true);
+
     } catch (error) {
       console.error('Error fetching detailed registration:', error);
-      // Fallback to basic reg if fetch fails
       setSelectedRegistration(reg);
       setShowAdmissionModal(true);
+    } finally {
+      // stop loading state when modal is open
+      setLoadingRegId(null);
     }
   };
 
@@ -160,14 +159,11 @@ export default function DashboardClient() {
     <div className="min-h-screen bg-gradient-to-br from-white-700 to-gray-300 flex flex-col">
       <Navbar user={user} />
       
-      {/* Success Notification */}
       {successMessage && (
         <div className="bg-green-50 border-l-4 border-green-500 p-4 m-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+              ✔
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-green-800">
@@ -183,15 +179,12 @@ export default function DashboardClient() {
               onClick={() => setSuccessMessage('')}
               className="ml-auto text-green-400 hover:text-green-600"
             >
-              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+              ✖
             </button>
           </div>
         </div>
       )}
 
-      {/* Logo Section */}
       <div className="flex flex-col items-center py-6">
         <div className="mb-4">
           <Image 
@@ -285,6 +278,8 @@ export default function DashboardClient() {
                     <p className="text-sm text-gray-600 mb-2">
                       <span className="font-semibold">Subjects:</span>
                     </p>
+
+                    {/* Subject List */}
                     {reg.chosen_subjects ? (
                       <div className="flex flex-wrap gap-1">
                         {reg.chosen_subjects.split(', ').map((subject, idx) => (
@@ -296,20 +291,28 @@ export default function DashboardClient() {
                     ) : (
                       <p className="text-xs text-gray-600">No subjects selected</p>
                     )}
+
+                    {/* Admission Card Button */}
                     {reg.exam_status === 'send_admission_cards' && (
                       <button
-                        onClick={() => openAdmissionModal(reg)}
-                        disabled={downloadedIds.has(reg.id)}
+                        onClick={() => {
+                          setLoadingRegId(reg.id); 
+                          openAdmissionModal(reg);
+                        }}
+                        disabled={downloadedIds.has(reg.id) || loadingRegId === reg.id}
                         className={`mt-2 px-4 py-1 rounded transition text-sm font-semibold ${
                           downloadedIds.has(reg.id)
                             ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                            : loadingRegId === reg.id
+                              ? 'bg-blue-300 text-white cursor-wait'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
                         }`}
                       >
-                        {downloadedIds.has(reg.id) 
-                          ? '✅ Admission Card Downloaded' 
-                          : '📄 View & Download Admission Card'
-                        }
+                        {downloadedIds.has(reg.id)
+                          ? '✅ Admission Card Downloaded'
+                          : loadingRegId === reg.id
+                            ? '⏳ Loading...'
+                            : '📄 View & Download Admission Card'}
                       </button>
                     )}
                   </div>
@@ -325,7 +328,6 @@ export default function DashboardClient() {
         </div>
       </div>
 
-      {/* Change Password Button - Footer */}
       <div className="bg-white border-t border-gray-200 p-4">
         <div className="container mx-auto flex justify-end">
           <button
@@ -350,7 +352,7 @@ export default function DashboardClient() {
             setShowAdmissionModal(false);
             setSelectedRegistration(null);
           }}
-          onDownload={() => handleDownloadComplete(selectedRegistration.id)} // New prop to notify on download
+          onDownload={() => handleDownloadComplete(selectedRegistration.id)}
         />
       )}
     </div>

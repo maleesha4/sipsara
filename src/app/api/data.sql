@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS admin_exams (
     exam_date DATE NOT NULL,
     registration_start_date DATE NOT NULL,
     registration_end_date DATE NOT NULL CHECK (registration_end_date > registration_start_date),
-    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'registration_open', 'closed', ' send_admission_cards','in_progress', 'completed', 'published')),
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'registration_open', 'closed', 'send_admission_cards','in_progress', 'completed', 'published')),
     description TEXT,
     created_by INT NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS admin_exam_subjects (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     admin_exam_id INT NOT NULL REFERENCES admin_exams(id) ON DELETE CASCADE,
     subject_id INT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    exam_date DATE NOT NULL,
+    exam_date DATE NOT NULL DEFAULT CURRENT_DATE,
     start_time TIME NOT NULL DEFAULT '09:00:00',
     end_time TIME NOT NULL DEFAULT '11:00:00',
     UNIQUE(admin_exam_id, subject_id)
@@ -223,7 +223,6 @@ LEFT JOIN admin_exam_registrations aer ON ae.id = aer.admin_exam_id
 GROUP BY ae.id, g.grade_name
 ORDER BY ae.created_at DESC;
 
--- Publish status view: ready_to_publish = all choices marked
 CREATE OR REPLACE VIEW admin_exam_publish_status AS
 SELECT 
     ae.id AS admin_exam_id,

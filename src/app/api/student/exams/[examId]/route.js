@@ -1,15 +1,23 @@
 // ============================================
-// FILE: app/api/student/exams/[examId]/route.js (UPDATED - Returns subject schedule)
+// FILE: app/api/student/exams/[examId]/route.js
 // ============================================
-import { NextResponse } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { verifyToken } from '../../../../../lib/auth';
 import { query } from '../../../../../lib/database';
 import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 
 export async function GET(request, { params }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    // Extract token preferring Authorization header, fallback to cookie
+    const authHeader = (await headers()).get('authorization');
+    let token;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get('auth_token')?.value;
+    }
 
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -21,11 +29,25 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get student ID and grade
+    // Await params (Next.js 15+ dynamic params are Promises)
+    const { examId } = await params;
+
+    if (!examId) {
+      return NextResponse.json({ error: 'Invalid exam ID' }, { status: 400 });
+    }
+
+    console.log('Fetching exam for user ID:', user.id, 'exam ID:', examId);
+
+    // Get student ID and grade with improved query
     const studentResult = await query(
-      'SELECT s.id, s.current_grade_id FROM students s JOIN users u ON s.user_id = u.id WHERE u.id = $1',
+      `SELECT s.id, s.current_grade_id, s.user_id, u.full_name, u.email
+       FROM students s 
+       JOIN users u ON s.user_id = u.id 
+       WHERE u.id = $1 AND u.status = 'active'`,
       [user.id]
     );
+
+    console.log('Student query result:', studentResult.rows);
 
     if (studentResult.rows.length === 0) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -34,13 +56,7 @@ export async function GET(request, { params }) {
     const studentId = studentResult.rows[0].id;
     const gradeId = studentResult.rows[0].current_grade_id;
 
-    // Await params for Next.js 15 compatibility
-    const paramsObj = await params;
-    const examId = paramsObj.examId;
-
-    if (!examId) {
-      return NextResponse.json({ error: 'Invalid exam ID' }, { status: 400 });
-    }
+    console.log('Student ID:', studentId, 'Grade ID:', gradeId);
 
     // Get exam details
     const examResult = await query(`
@@ -53,19 +69,24 @@ export async function GET(request, { params }) {
         ae.registration_start_date,
         ae.registration_end_date,
         ae.status,
-        ae.description,
-        ae.published_at
+        ae.description
       FROM admin_exams ae
       JOIN grades g ON ae.grade_id = g.id
       WHERE ae.id = $1
-        AND ae.grade_id = $2
-    `, [examId, gradeId]);
+    `, [examId]);
+
+    console.log('Exam query result:', examResult.rows);
 
     if (examResult.rows.length === 0) {
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
     }
 
     const exam = examResult.rows[0];
+
+    // Verify exam is for student's grade
+    if (exam.grade_id !== gradeId) {
+      return NextResponse.json({ error: 'Exam not for your grade' }, { status: 403 });
+    }
 
     // Check if student is registered for this exam
     const registrationResult = await query(`

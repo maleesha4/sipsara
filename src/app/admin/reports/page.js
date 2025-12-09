@@ -58,19 +58,6 @@ export default function AdminReports() {
             <span className="text-blue-600 font-semibold">View Report →</span>
           </Link>
 
-          {/* Exam Comparison Report */}
-          <Link
-            href="/admin/reports/exam-comparison"
-            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition p-6"
-          >
-            <div className="text-green-600 text-5xl mb-4">📈</div>
-            <h3 className="text-xl font-bold mb-2">Exam Comparison</h3>
-            <p className="text-gray-600 mb-4">
-              Compare performance across different exams and identify trends
-            </p>
-            <span className="text-green-600 font-semibold">View Report →</span>
-          </Link>
-
           {/* Subject Analysis Report */}
           <Link
             href="/admin/reports/subject-analysis"
@@ -95,32 +82,6 @@ export default function AdminReports() {
               Track tutor workload, marks entry speed, and student outcomes
             </p>
             <span className="text-orange-600 font-semibold">View Report →</span>
-          </Link>
-
-          {/* Attendance Report */}
-          <Link
-            href="/admin/reports/attendance"
-            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition p-6"
-          >
-            <div className="text-red-600 text-5xl mb-4">✅</div>
-            <h3 className="text-xl font-bold mb-2">Attendance Report</h3>
-            <p className="text-gray-600 mb-4">
-              Exam attendance rates and student participation trends
-            </p>
-            <span className="text-red-600 font-semibold">View Report →</span>
-          </Link>
-
-          {/* Financial Report */}
-          <Link
-            href="/admin/reports/financial"
-            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition p-6"
-          >
-            <div className="text-teal-600 text-5xl mb-4">💰</div>
-            <h3 className="text-xl font-bold mb-2">Financial Report</h3>
-            <p className="text-gray-600 mb-4">
-              Revenue tracking, payment status, and financial summaries
-            </p>
-            <span className="text-teal-600 font-semibold">View Report →</span>
           </Link>
 
           {/* Top Performers Report */}

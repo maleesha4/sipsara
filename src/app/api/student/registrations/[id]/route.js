@@ -1,19 +1,18 @@
 // ============================================
-// FILE: app/api/student/registrations/[id]/route.js (NEW FILE)
+// FILE: app/api/student/registrations/[id]/route.js (UPDATED FOR AUTH HEADER)
 // ============================================
 import { NextResponse } from 'next/server';
 import { verifyToken } from '../../../../../lib/auth';
 import { query } from '../../../../../lib/database';
-import { cookies } from 'next/headers';
 
 export async function GET(request, { params }) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-
-    if (!token) {
+    // Extract token from Authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
+    const token = authHeader.substring(7); // Remove 'Bearer '
 
     const user = verifyToken(token);
 
@@ -32,10 +31,12 @@ export async function GET(request, { params }) {
     }
 
     const studentId = studentResult.rows[0].id;
+    console.log('Debug: Authenticated student ID:', studentId); // DEBUG: Log student ID
 
-    // Await params
+    // Await params (required in Next.js 15+ for dynamic routes)
     const paramsObj = await params;
     const registrationId = paramsObj.id;
+    console.log('Debug: Requested registration ID:', registrationId); // DEBUG: Log requested ID
 
     // Get registration with exam details
     const registrationResult = await query(`
@@ -59,6 +60,8 @@ export async function GET(request, { params }) {
       WHERE aer.id = $1 AND aer.student_id = $2
     `, [registrationId, studentId]);
 
+    console.log('Debug: Registration query rows count:', registrationResult.rows.length); // DEBUG: Log query result count
+
     if (registrationResult.rows.length === 0) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
@@ -80,7 +83,7 @@ export async function GET(request, { params }) {
       ORDER BY aes.exam_date, aes.start_time
     `, [registration.exam_id, registrationId]);
 
-    console.log('Subjects found:', subjectsResult.rows); // Debug log
+    console.log('Subjects found:', subjectsResult.rows); // Existing debug log
 
     // Add subject schedule to registration
     registration.subject_schedule = subjectsResult.rows;

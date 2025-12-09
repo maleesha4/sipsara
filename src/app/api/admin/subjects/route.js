@@ -70,8 +70,13 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Subject already exists' }, { status: 400 });
     }
 
-    await query(`SELECT setval('subjects_id_seq', (SELECT COALESCE(MAX(id), 0) FROM subjects), true)`);
-    
+    // Sync sequence only if table has existing records (avoids setting to 0 on empty table)
+    const maxIdResult = await query('SELECT COALESCE(MAX(id), 0) AS max_id FROM subjects');
+    const maxId = parseInt(maxIdResult.rows[0].max_id, 10);
+    if (maxId > 0) {
+      await query('SELECT setval($1, $2, true)', ['subjects_id_seq', maxId]);
+    }
+
     const result = await query(
       'INSERT INTO subjects (name) VALUES ($1) RETURNING id, name',
       [name.trim()]

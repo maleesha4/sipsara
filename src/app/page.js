@@ -114,14 +114,14 @@ export default function Home() {
     </div>
 
     {/* Info cards */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-10 mb-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10 mb-5">
       <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6 min-w-[280px] w-full">
 
         <Image
-          src="/img1.jpg"
+          src="/sinhala.jpg"
           alt="Students"
-          width={100}
-          height={100}
+          width={150}
+          height={150}
           className="w-20 h-20 object-contain flex-shrink-0"
         />
 
@@ -135,17 +135,35 @@ export default function Home() {
       <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6 min-w-[280px] w-full">
 
         <Image
-          src="/img1.jpg"
+          src="/english.jpg"
           alt="Students"
-          width={100}
-          height={100}
+          width={150}
+          height={150}
           className="w-20 h-20 object-contain flex-shrink-0"
         />
 
         <div className="flex-1 min-w-0">
-          <h4 className="text-l font-bold text-black mb-3 break-words">සිංහල භාෂාව හා සාහිත්‍යය</h4>
+          <h4 className="text-l font-bold text-black mb-3 break-words">ඉංග්‍රීසි</h4>
           <ul className="text-gray-700 space-y-2">
-            <li>• කසුන් වෙඩිසිංහ</li>
+            <li>• මලින් ප්‍රියනාත්</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6 min-w-[280px] w-full">
+
+        <Image
+          src="/maths.jpg"
+          alt="Students"
+          width={150}
+          height={150}
+          className="w-20 h-20 object-contain flex-shrink-0"
+        />
+
+        <div className="flex-1 min-w-0">
+          <h4 className="text-l font-bold text-black mb-3 break-words">ගණිතය</h4>
+          <ul className="text-gray-700 space-y-2">
+            <li>• තාරක මධුශාල්</li>
           </ul>
         </div>
       </div>
@@ -153,23 +171,41 @@ export default function Home() {
       <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6 min-w-[280px] w-full">
 
         <Image
-          src="/img1.jpg"
+          src="/science.jpg"
           alt="Students"
-          width={100}
-          height={100}
+          width={150}
+          height={150}
           className="w-20 h-20 object-contain flex-shrink-0"
         />
 
         <div className="flex-1 min-w-0">
-          <h4 className="text-l font-bold text-black mb-3 break-words">සිංහල භාෂාව හා සාහිත්‍යය</h4>
+          <h4 className="text-l font-bold text-black mb-3 break-words">විද්‍යාව</h4>
           <ul className="text-gray-700 space-y-2">
-            <li>• කසුන් වෙඩිසිංහ</li>
+            <li>• ප්‍රසාද් ප්‍රියංකර</li>
           </ul>
         </div>
       </div>
-    </div>
+      <div className="bg-blue-200 rounded-lg p-6 shadow-lg flex items-center space-x-6 min-w-[280px] w-full">
+
+        <Image
+          src="/history.jpg"
+          alt="Students"
+          width={150}
+          height={150}
+          className="w-20 h-20 object-contain flex-shrink-0"
+        />
+
+        <div className="flex-1 min-w-0">
+          <h4 className="text-l font-bold text-black mb-3 break-words">ඉතිහාසය</h4>
+          <ul className="text-gray-700 space-y-2">
+            <li>• නිශාන් ප්‍රියංග</li>
+          </ul>
         </div>
       </div>
+      
+    </div>
+    </div>
+    </div>
     
   );
 }
