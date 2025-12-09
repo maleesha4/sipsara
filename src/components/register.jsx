@@ -82,10 +82,11 @@ export default function Register() {
 
           {/* Full Name */}
           <div>
-            <label className="block text-sm font-medium mb-1">සම්පූර්ණ නම</label>
+            <label className="block text-sm font-medium mb-1">නම</label>
             <input
               type="text"
               required
+              placeholder="උදා: kamal perera"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               value={formData.fullName}
               onChange={(e) =>
@@ -96,10 +97,11 @@ export default function Register() {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium mb-1">Email ලිපිනය</label>
+            <label className="block text-sm font-medium mb-1">Gmail ලිපිනය</label>
             <input
               type="email"
               required
+              placeholder="example@gmail.com"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               value={formData.email}
               onChange={(e) =>
@@ -114,6 +116,8 @@ export default function Register() {
             <input
               type="tel"
               required
+              placeholder="0771234567"
+              maxLength={10}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               value={formData.phone}
               onChange={(e) =>
@@ -122,7 +126,7 @@ export default function Register() {
             />
           </div>
 
-          {/* Password with eye toggle */}
+          {/* Password */}
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
             <div className="relative">
@@ -130,6 +134,7 @@ export default function Register() {
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={6}
+                placeholder="characters 6කට අඩු නොවිය යුතුය"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 value={formData.password}
                 onChange={(e) =>
@@ -137,7 +142,6 @@ export default function Register() {
                 }
               />
 
-              {/* Eye icon */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -148,7 +152,7 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Confirm Password with eye toggle */}
+          {/* Confirm Password */}
           <div>
             <label className="block text-sm font-medium mb-1">Confirm Password</label>
             <div className="relative">
@@ -156,6 +160,7 @@ export default function Register() {
                 type={showConfirmPassword ? "text" : "password"}
                 required
                 minLength={6}
+                placeholder="ඉහත password එකම නැවත ලියන්න"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 value={formData.confirmPassword}
                 onChange={(e) =>
@@ -163,10 +168,11 @@ export default function Register() {
                 }
               />
 
-              {/* Eye icon */}
               <button
                 type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onClick={() =>
+                  setShowConfirmPassword(!showConfirmPassword)
+                }
                 className="absolute right-3 top-2 text-gray-600"
               >
                 {showConfirmPassword ? <EyeOff size={22} /> : <Eye size={22} />}
@@ -186,7 +192,7 @@ export default function Register() {
                 setFormData({ ...formData, dateOfBirth: e.target.value })
               }
             />
-          </div> 
+          </div>
 
           {/* Gender */}
           <div>
@@ -227,6 +233,7 @@ export default function Register() {
             <label className="block text-sm font-medium mb-1">ලිපිනය</label>
             <textarea
               required
+              placeholder="උදා: 125/B, hegoda, rathgama"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               value={formData.address}
               onChange={(e) =>
@@ -241,6 +248,7 @@ export default function Register() {
             <input
               type="text"
               required
+              placeholder="උදා: sunil perera"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               value={formData.parentName}
               onChange={(e) =>
@@ -248,6 +256,7 @@ export default function Register() {
               }
             />
           </div>
+
           {/* Buttons */}
           <div className="flex gap-3">
             <button
