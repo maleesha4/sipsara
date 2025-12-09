@@ -283,7 +283,7 @@ export default function CreateAdminExam() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-black"
             >
               <option value="draft">Draft</option>
-              <option value="published">Open Registration</option>
+              <option value="registration_open">Open Registration</option>
             </select>
           </div>
 

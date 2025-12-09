@@ -54,7 +54,6 @@ export async function GET(request) {
         ae.exam_name,
         ae.exam_date,
         ae.status as exam_status,
-        ae.published_at,
         g.grade_name,
         u.full_name as student_name,
         u.email as student_email,
@@ -69,7 +68,7 @@ export async function GET(request) {
       WHERE aer.student_id = $1
       GROUP BY 
         aer.id, aer.admin_exam_id, aer.status, aer.admission_number, aer.created_at,
-        ae.id, ae.exam_name, ae.exam_date, ae.status, ae.published_at,
+        ae.id, ae.exam_name, ae.exam_date, ae.status,
         g.grade_name, u.full_name, u.email
       ORDER BY ae.exam_date DESC
     `, [studentId]);
