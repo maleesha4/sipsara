@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 export default function Home() {
 
   // Only third rectangle slides
-  const sliderImages = ["/img3.jpg", "/img4.jpg", "/img5.jpg"];
+  const sliderImages = ["/img3.jpg", "/img4.jpg", "/img5_.jpg"];
 
   const [index3, setIndex3] = useState(0);
 

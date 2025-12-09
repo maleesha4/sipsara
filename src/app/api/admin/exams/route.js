@@ -1,5 +1,5 @@
 // ============================================
-// FILE: app/api/admin/exams/route.js (FIXED)
+// FILE: app/api/admin/exams/route.js (UPDATED)
 // ============================================
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -30,7 +30,6 @@ export async function GET() {
         ae.registration_end_date,
         ae.status,
         ae.description,
-        ae.published_at,
         ae.created_at,
         g.grade_name,
         COUNT(DISTINCT aer.id) as registration_count

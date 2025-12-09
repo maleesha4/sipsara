@@ -1,9 +1,10 @@
 // ============================================
-// FILE: src/components/ChangePasswordModal.js
+// FILE: src/components/ChangePasswordModal.js (UPDATED)
 // ============================================
 'use client';
 
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -14,6 +15,9 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -103,46 +107,70 @@ export default function ChangePasswordModal({ isOpen, onClose, user }) {
         )}
 
         <div className="space-y-4 mb-6">
-          <div>
+          <div className="relative">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Current Password
             </label>
             <input
-              type="password"
+              type={showCurrent ? "text" : "password"}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="Enter current password"
               disabled={loading}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
+            <button
+              type="button"
+              onClick={() => setShowCurrent(!showCurrent)}
+              disabled={loading}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            >
+              {showCurrent ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               New Password
             </label>
             <input
-              type="password"
+              type={showNew ? "text" : "password"}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Enter new password"
               disabled={loading}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
+            <button
+              type="button"
+              onClick={() => setShowNew(!showNew)}
+              disabled={loading}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            >
+              {showNew ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Confirm New Password
             </label>
             <input
-              type="password"
+              type={showConfirm ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
               disabled={loading}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              disabled={loading}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            >
+              {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
         </div>
 
