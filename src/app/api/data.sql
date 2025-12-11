@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS students (
     user_id INT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     current_grade_id INT NOT NULL REFERENCES grades(id) ON UPDATE CASCADE,
     gender gender_enum,
-    date_of_birth DATE CHECK (date_of_birth < CURRENT_DATE),
+    date_of_birth DATE,
     address TEXT,
     parent_name VARCHAR(100),
     enrollment_date DATE NOT NULL DEFAULT CURRENT_DATE,

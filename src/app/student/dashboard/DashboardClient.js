@@ -136,6 +136,8 @@ export default function DashboardClient() {
     setDownloadedIds(prev => new Set([...prev, regId]));
   };
 
+  const studentAdmissionNumber = user ? (25012300 + user.id).toString() : '';
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -326,6 +328,13 @@ export default function DashboardClient() {
             )}
           </div>
         </div>
+
+        {studentAdmissionNumber && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-bold mb-4">Student Admission Number</h2>
+            <p className="text-4xl font-bold text-blue-600">{studentAdmissionNumber}</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border-t border-gray-200 p-4">
