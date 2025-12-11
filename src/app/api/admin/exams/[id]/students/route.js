@@ -1,5 +1,5 @@
 // ============================================
-// FILE: app/api/admin/exams/[id]/students/route.js (UPDATED ADMISSION NUMBER)
+// FILE: app/api/admin/exams/[id]/students/route.js (UPDATED WITH AUTO SUBJECT ASSIGNMENT)
 // ============================================
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -120,6 +120,18 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
     }
 
+    // Fetch all subjects for this exam
+    const examSubjects = await query(
+      'SELECT subject_id FROM admin_exam_subjects WHERE admin_exam_id = $1',
+      [examIdInt]
+    );
+
+    const examSubjectIds = examSubjects.rows.map(row => row.subject_id);
+
+    if (examSubjectIds.length === 0) {
+      return NextResponse.json({ error: 'No subjects assigned to this exam' }, { status: 400 });
+    }
+
     // Insert registrations for each student with admission_number = 25012300 + student_id
     const insertedIds = [];
     for (const studentId of student_ids) {
@@ -134,12 +146,22 @@ export async function POST(request, { params }) {
       `, [examIdInt, studentIdInt, admissionNumber]);
 
       if (result.rows.length > 0) {
-        insertedIds.push(result.rows[0].id);
+        const newRegId = result.rows[0].id;
+
+        // Automatically assign all exam subjects to this new registration
+        for (const subjectId of examSubjectIds) {
+          await query(
+            'INSERT INTO admin_exam_student_choices (registration_id, subject_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [newRegId, subjectId]
+          );
+        }
+
+        insertedIds.push(newRegId);
       }
     }
 
     return NextResponse.json({ 
-      message: `Added ${insertedIds.length} students successfully`,
+      message: `Added ${insertedIds.length} students successfully with all subjects assigned`,
       inserted_ids: insertedIds 
     });
   } catch (error) {
