@@ -199,10 +199,6 @@ export default function StudentResultsPage() {
                   <span className="text-lg font-semibold text-gray-800">{results.exam_name}</span>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-600">Exam Date: </span>
-                  <span className="text-lg font-semibold text-gray-800">{new Date(results.exam_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                </div>
-                <div>
                   <span className="text-sm text-gray-600">Admission Number: </span>
                   <span className="text-lg font-bold text-blue-600 font-mono">{results.admission_number}</span>
                 </div>
@@ -248,7 +244,6 @@ export default function StudentResultsPage() {
 
             {/* Grade Legend */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="font-semibold text-gray-700 mb-2">Grade Classification:</h4>
               <div className="grid grid-cols-5 gap-2 text-sm">
                 <div className="text-center">
                   <span className="font-bold text-green-600">A</span>
