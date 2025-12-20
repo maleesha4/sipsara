@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/tutor/marks/MarksClient.js
+// FILE: src/app/tutor/marks/MarksClient.js (DARK MODE SUPPORT)
 // ============================================
 'use client';
 
@@ -252,10 +252,11 @@ export default function MarksClient() {
 
   if (loading && !examsLoaded) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      // Updated: Dark mode for loading screen
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8 text-center">
-          <p>Loading marks...</p>
+          <p className="text-gray-700 dark:text-gray-300">Loading marks...</p>
         </div>
       </div>
     );
@@ -264,13 +265,14 @@ export default function MarksClient() {
   // If no exam selected and no available exams, show message
   if (!examId && availableExams.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      // Updated: Dark mode for no exams message
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-6">Enter Marks</h1>
-          {error && <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div>}
-          <p className="text-gray-500">No exams assigned to you yet. Check with admin for assignments.</p>
-          <Link href="/tutor/dashboard" className="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">
+          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Enter Marks</h1>
+          {error && <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-500 text-red-700 dark:text-red-300 rounded-md">{error}</div>}
+          <p className="text-gray-500 dark:text-gray-400">No exams assigned to you yet. Check with admin for assignments.</p>
+          <Link href="/tutor/dashboard" className="mt-4 inline-block bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700">
             Back to Dashboard
           </Link>
         </div>
@@ -281,29 +283,30 @@ export default function MarksClient() {
   // Show exam selection if no examId but exams available
   if (!examId) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      // Updated: Dark mode for exam selection
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-6">Select Exam to Enter Marks</h1>
-          {error && <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">{error}</div>}
-          <div className="bg-white rounded-lg shadow p-6">
+          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Select Exam to Enter Marks</h1>
+          {error && <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-500 text-red-700 dark:text-red-300 rounded-md">{error}</div>}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             {availableExams.map(exam => (
-              <div key={exam.id} className="border-b py-4 last:border-b-0">
-                <h3 className="font-semibold">{exam.exam_name}</h3>
-                <p className="text-sm text-gray-600 mb-2">Date: {new Date(exam.exam_date).toLocaleDateString()} | Grade: {exam.grade_name}</p>
-                <div className="text-sm mb-2">
+              <div key={exam.id} className="border-b py-4 last:border-b-0 border-gray-200 dark:border-gray-600">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{exam.exam_name}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Date: {new Date(exam.exam_date).toLocaleDateString()} | Grade: {exam.grade_name}</p>
+                <div className="text-sm mb-2 text-gray-600 dark:text-gray-400">
                   Students per subject: {Object.entries(exam.student_count_per_subject || {}).map(([sub, count]) => `${sub}: ${count}`).join(', ')}
                 </div>
                 <button
                   onClick={() => router.push(`/tutor/marks?examId=${exam.id}`)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   Enter Marks for this Exam
                 </button>
               </div>
             ))}
           </div>
-          <Link href="/tutor/dashboard" className="mt-4 inline-block bg-gray-500 text-white px-4 py-2 rounded">
+          <Link href="/tutor/dashboard" className="mt-4 inline-block bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-500">
             Back to Dashboard
           </Link>
         </div>
@@ -314,33 +317,36 @@ export default function MarksClient() {
   const pendingUnsavedCount = choices.filter(c => !c.score && pendingScores[c.choice_id] && pendingScores[c.choice_id].trim() !== '').length;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    // Updated: Page background for dark mode
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar user={user} />
       <div className="container mx-auto px-4 py-8">
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          // Updated: Error alert for dark mode
+          <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-500 text-red-700 dark:text-red-300 rounded-md">
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          // Updated: Success alert for dark mode
+          <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/20 border border-green-400 dark:border-green-500 text-green-700 dark:text-green-300 rounded-md">
             {success}
           </div>
         )}
         <div className="flex justify-center items-center mb-6">
-          <h1 className="text-3xl font-bold text-center">Enter Marks</h1>
+          <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100">Enter Marks</h1>
         </div>
 
         {/* Row 1: Exam name + Select Exam button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
-            <p className="text-gray-700">
-              Exam: <span className="font-semibold">{activeExam.name}</span>
+            <p className="text-gray-700 dark:text-gray-300">
+              Exam: <span className="font-semibold text-gray-900 dark:text-gray-100">{activeExam.name}</span>
             </p>
 
             <Link
               href="/tutor/marks"
-              className="bg-gray-500 text-white px-4 py-2 rounded text-center w-40"
+              className="bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded text-center w-40 hover:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               Select Exam
             </Link>
@@ -350,13 +356,13 @@ export default function MarksClient() {
         {/* Row 2: Exam date + Back button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
-            <p className="text-gray-700">
+            <p className="text-gray-700 dark:text-gray-300">
               Date: {new Date(activeExam.date).toLocaleDateString()}
             </p>
 
             <Link
               href="/tutor/dashboard"
-              className="bg-blue-500 text-white px-4 py-2 rounded text-center w-40"
+              className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded text-center w-40 hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               Back to Dashboard
             </Link>
@@ -366,14 +372,14 @@ export default function MarksClient() {
         {/* Row 3: Grade + Refresh button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
-            <p className="text-gray-700">
+            <p className="text-gray-700 dark:text-gray-300">
               Grade: {activeExam.grade_name}
             </p>
 
             <button
               onClick={() => fetchChoices(examId)}
               disabled={loading}
-              className="bg-gray-500 text-white px-4 py-2 rounded text-center w-40 disabled:opacity-50"
+              className="bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded text-center w-40 disabled:opacity-50 hover:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               {loading ? 'Loading...' : 'Refresh'}
             </button>
@@ -383,26 +389,28 @@ export default function MarksClient() {
         {/* Row 4: Total choices left only */}
         {activeExam && (
           <div className="mb-4">
-            <p className="text-gray-700">
-              Total Choices: <span className="font-semibold">{choices.length}</span>
+            <p className="text-gray-700 dark:text-gray-300">
+              Total Choices: <span className="font-semibold text-gray-900 dark:text-gray-100">{choices.length}</span>
             </p>
           </div>
         )}
 
         {choices.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <p className="text-gray-500">No students have selected your subjects for this exam yet. Check with admin for registrations.</p>
+          // Updated: Empty choices message for dark mode
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-500 dark:text-gray-400">No students have selected your subjects for this exam yet. Check with admin for registrations.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-x-auto">
+          // Updated: Table container for dark mode
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto border border-gray-200 dark:border-gray-700">
             <table className="min-w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-4 py-2 text-left">Student Name</th>
-                  <th className="px-4 py-2 text-left">Admission #</th>
-                  <th className="px-4 py-2 text-left">Subject</th>
-                  <th className="px-4 py-2 text-left">Marks</th>
-                  <th className="px-4 py-2 text-left">Actions</th>
+                  <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-100">Student Name</th>
+                  <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-100">Admission #</th>
+                  <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-100">Subject</th>
+                  <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-100">Marks</th>
+                  <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-100">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -415,10 +423,10 @@ export default function MarksClient() {
                   const isValidInput = !!inputValue && inputValue.trim() !== '' && !isNaN(parseInt(inputValue)) && parseInt(inputValue) >= 0 && parseInt(inputValue) <= 100;
 
                   return (
-                    <tr key={choiceId} className="border-t">
-                      <td className="px-4 py-2 font-medium">{choice.student_name}</td>
-                      <td className="px-4 py-2">{choice.admission_number}</td>
-                      <td className="px-4 py-2">{choice.subject_name}</td>
+                    <tr key={choiceId} className="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{choice.student_name}</td>
+                      <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{choice.admission_number}</td>
+                      <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{choice.subject_name}</td>
                       <td className="px-4 py-2">
                         {isEditing || !hasSavedScore ? (
                           <input
@@ -429,11 +437,11 @@ export default function MarksClient() {
                             onChange={(e) => {
                               setPendingScores(prev => ({ ...prev, [choiceId]: e.target.value }));
                             }}
-                            className="border rounded px-2 py-1 w-20"
+                            className="border rounded px-2 py-1 w-20 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                             autoFocus={isEditing}
                           />
                         ) : (
-                          <span className="px-2 py-1 rounded bg-green-100">
+                          <span className="px-2 py-1 rounded bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                             {choice.score}
                           </span>
                         )}
@@ -444,13 +452,13 @@ export default function MarksClient() {
                             <button
                               onClick={() => handleMarkSubmit(choiceId, inputValue)}
                               disabled={!isValidInput || loading}
-                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 disabled:opacity-50"
+                              className="bg-green-500 dark:bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-600 dark:hover:bg-green-500 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-500"
                             >
                               Update
                             </button>
                             <button
                               onClick={cancelEditing}
-                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                              className="bg-gray-500 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
                             >
                               Cancel
                             </button>
@@ -459,7 +467,7 @@ export default function MarksClient() {
                           <button
                             onClick={() => startEditing(choiceId)}
                             disabled={loading}
-                            className="px-3 py-1 rounded text-sm disabled:opacity-50 bg-yellow-500 hover:bg-yellow-600 text-white"
+                            className="px-3 py-1 rounded text-sm disabled:opacity-50 bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-500 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           >
                             Edit
                           </button>
@@ -470,11 +478,11 @@ export default function MarksClient() {
                 })}
               </tbody>
             </table>
-            <div className="mt-4 p-4 bg-gray-50 rounded">
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded">
               <button
                 onClick={handleBulkSave}
                 disabled={loading || pendingUnsavedCount === 0}
-                className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold disabled:opacity-50"
+                className="bg-blue-500 dark:bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-500 font-semibold disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 Save All Entries ({pendingUnsavedCount} pending)
               </button>
