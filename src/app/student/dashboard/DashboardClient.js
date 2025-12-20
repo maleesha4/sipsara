@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/student/dashboard/DashboardClient.js (WITH LOADING BUTTON STATE)
+// FILE: src/app/student/dashboard/DashboardClient.js (WITH LOADING BUTTON STATE & DARK MODE)
 // ============================================
 'use client';
 
@@ -85,6 +85,7 @@ export default function DashboardClient() {
     }
   };
 
+  // For testing with provided date: const now = new Date('2025-12-20');
   const now = new Date();
   const availableExams = exams.filter(exam => {
     const regStart = new Date(exam.registration_start_date);
@@ -140,10 +141,11 @@ export default function DashboardClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      // Updated: Dark mode for loading screen
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
-          <p>Loading...</p>
+          <p className="text-gray-700 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -151,35 +153,38 @@ export default function DashboardClient() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p>Access denied. Redirecting to login...</p>
+      // Updated: Dark mode for access denied
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-700 dark:text-gray-300">Access denied. Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white-700 to-gray-300 flex flex-col">
+    // Updated: Gradient with valid colors + dark mode
+    <div className="min-h-screen bg-gradient-to-br from-white to-gray-300 dark:from-gray-900 dark:to-gray-800 flex flex-col">
       <Navbar user={user} />
       
       {successMessage && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 m-4">
+        // Updated: Success alert for dark mode
+        <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 p-4 m-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               ✔
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-green-800">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
                 {successMessage}
               </p>
               {admissionNumber && (
-                <p className="text-sm text-green-700 mt-1">
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                   Your admission number: <span className="font-bold">{admissionNumber}</span>
                 </p>
               )}
             </div>
             <button
               onClick={() => setSuccessMessage('')}
-              className="ml-auto text-green-400 hover:text-green-600"
+              className="ml-auto text-green-400 dark:text-green-500 hover:text-green-600 dark:hover:text-green-400"
             >
               ✖
             </button>
@@ -206,50 +211,53 @@ export default function DashboardClient() {
             height={80}
             className="w-48 h-12 sm:w-64 sm:h-16 md:w-80 md:h-20 lg:w-[300px] lg:h-[80px] object-contain"
           />
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mt-3 text-black">
+          {/* Updated: Header text for dark mode */}
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mt-3 text-black dark:text-white">
             අධ්‍යාපන ආයතනය
           </h1>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <h1 className="text-3xl font-bold mb-6">Student Dashboard</h1>
+        {/* Updated: Main title text for dark mode */}
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Student Dashboard</h1>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Link href="/student/exams" className="bg-blue-500 text-white p-6 rounded-lg hover:bg-blue-600 transition">
+          <Link href="/student/exams" className="bg-blue-500 dark:bg-blue-600 text-white p-6 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500">
             <h3 className="text-xl font-bold mb-2">Available Exams</h3>
             <p className="text-3xl">{availableExamsCount}</p>
           </Link>
           
-          <Link href="/student/registrations" className="bg-green-500 text-white p-6 rounded-lg hover:bg-green-600 transition">
+          <Link href="/student/registrations" className="bg-green-500 dark:bg-green-600 text-white p-6 rounded-lg hover:bg-green-600 dark:hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-green-500">
             <h3 className="text-xl font-bold mb-2">My Registrations</h3>
             <p className="text-3xl">{registrations.length}</p>
           </Link>
           
-          <Link href="/student/results" className="bg-purple-500 text-white p-6 rounded-lg hover:bg-purple-600 transition">
+          <Link href="/student/results" className="bg-purple-500 dark:bg-purple-600 text-white p-6 rounded-lg hover:bg-purple-600 dark:hover:bg-purple-700 transition focus:outline-none focus:ring-2 focus:ring-purple-500">
             <h3 className="text-xl font-bold mb-2">Results</h3>
             <p className="text-3xl">View</p>
           </Link>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Available Exams</h2>
+          {/* Updated: Card backgrounds and text for dark mode */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Available Exams</h2>
             {availableExams.length === 0 ? (
-              <p className="text-gray-500">No exams available</p>
+              <p className="text-gray-500 dark:text-gray-400">No exams available</p>
             ) : (
               <div className="space-y-4">
                 {availableExams.slice(0, 3).map(exam => {
                   return (
-                    <div key={exam.id} className="border-l-4 border-blue-500 pl-4">
-                      <h3 className="font-semibold">{exam.exam_name}</h3>
-                      <p className="text-sm text-gray-600">Grade: {exam.grade_name}</p>
-                      <p className="text-sm text-gray-600">Date: {formatDate(exam.exam_date)}</p>
-                      <p className="text-sm text-gray-600">Registration: {formatDate(exam.registration_start_date)} - {formatDate(exam.registration_end_date)}</p>
+                    <div key={exam.id} className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 bg-blue-50 dark:bg-blue-900/20">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{exam.exam_name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Grade: {exam.grade_name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Date: {formatDate(exam.exam_date)}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Registration: {formatDate(exam.registration_start_date)} - {formatDate(exam.registration_end_date)}</p>
                       
                       <Link 
                         href={`/student/exams/register/${exam.id}`}
-                        className="mt-2 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm"
+                        className="mt-2 inline-block bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         Register
                       </Link>
@@ -257,7 +265,7 @@ export default function DashboardClient() {
                   );
                 })}
                 {availableExamsCount > 3 && (
-                  <Link href="/student/exams" className="text-blue-600 hover:underline text-sm font-semibold">
+                  <Link href="/student/exams" className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-semibold">
                     View All Exams →
                   </Link>
                 )}
@@ -265,36 +273,36 @@ export default function DashboardClient() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">My Registrations</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">My Registrations</h2>
             {registrations.length === 0 ? (
-              <p className="text-gray-500">You haven't registered for any exams yet</p>
+              <p className="text-gray-500 dark:text-gray-400">You haven't registered for any exams yet</p>
             ) : (
               <div className="space-y-4">
                 {registrations.slice(0, 3).map(reg => (
-                  <div key={reg.id} className="border-l-4 border-green-500 pl-4 bg-green-50 p-3 rounded">
-                    <h3 className="font-semibold text-green-900">{reg.exam_name}</h3>
-                    <p className="text-sm text-gray-600">Status: <span className="font-semibold capitalize">{reg.registration_status}</span></p>
-                    <p className="text-sm text-gray-600">Exam Status: <span className="font-semibold capitalize">{reg.exam_status}</span></p>
-                    <p className="text-sm text-gray-600">Admission: <span className="font-mono font-bold">{reg.admission_number}</span></p>
-                    <p className="text-sm text-gray-600 mb-2">
+                  <div key={reg.id} className="border-l-4 border-green-500 dark:border-green-400 pl-4 bg-green-50 dark:bg-green-900/20 p-3 rounded">
+                    <h3 className="font-semibold text-green-900 dark:text-green-200">{reg.exam_name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Status: <span className="font-semibold capitalize">{reg.registration_status}</span></p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Exam Status: <span className="font-semibold capitalize">{reg.exam_status}</span></p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Admission: <span className="font-mono font-bold">{reg.admission_number}</span></p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       <span className="font-semibold">Subjects:</span>
                     </p>
 
-                    {/* Subject List */}
+                    {/* Subject List - Updated: Tags for dark mode */}
                     {reg.chosen_subjects ? (
                       <div className="flex flex-wrap gap-1">
                         {reg.chosen_subjects.split(', ').map((subject, idx) => (
-                          <span key={idx} className="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                          <span key={idx} className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs font-semibold">
                             {subject}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-600">No subjects selected</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">No subjects selected</p>
                     )}
 
-                    {/* Admission Card Button */}
+                    {/* Admission Card Button - Updated: Colors for dark mode */}
                     {reg.exam_status === 'send_admission_cards' && (
                       <button
                         onClick={() => {
@@ -302,12 +310,12 @@ export default function DashboardClient() {
                           openAdmissionModal(reg);
                         }}
                         disabled={downloadedIds.has(reg.id) || loadingRegId === reg.id}
-                        className={`mt-2 px-4 py-1 rounded transition text-sm font-semibold ${
+                        className={`mt-2 px-4 py-1 rounded transition text-sm font-semibold focus:outline-none focus:ring-2 ${
                           downloadedIds.has(reg.id)
-                            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                            ? 'bg-gray-400 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed'
                             : loadingRegId === reg.id
-                              ? 'bg-blue-300 text-white cursor-wait'
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                              ? 'bg-blue-300 dark:bg-blue-700 text-white cursor-wait'
+                              : 'bg-blue-500 dark:bg-blue-600 text-white hover:bg-blue-600 dark:hover:bg-blue-700'
                         }`}
                       >
                         {downloadedIds.has(reg.id)
@@ -320,7 +328,7 @@ export default function DashboardClient() {
                   </div>
                 ))}
                 {registrations.length > 3 && (
-                  <Link href="/student/registrations" className="text-green-600 hover:underline text-sm font-semibold">
+                  <Link href="/student/registrations" className="text-green-600 dark:text-green-400 hover:underline text-sm font-semibold">
                     View All Registrations →
                   </Link>
                 )}
@@ -330,18 +338,20 @@ export default function DashboardClient() {
         </div>
 
         {studentAdmissionNumber && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 className="text-xl font-bold mb-4">Student Admission Number</h2>
-            <p className="text-4xl font-bold text-blue-600">{studentAdmissionNumber}</p>
+          // Updated: Admission number card for dark mode
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Student Admission Number</h2>
+            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">{studentAdmissionNumber}</p>
           </div>
         )}
       </div>
 
-      <div className="bg-white border-t border-gray-200 p-4">
+      {/* Updated: Footer button for dark mode */}
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
         <div className="container mx-auto flex justify-end">
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition text-sm font-semibold"
+            className="bg-gray-600 dark:bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600 transition text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
             🔒 Change Password
           </button>

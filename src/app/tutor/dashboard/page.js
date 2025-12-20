@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/tutor/dashboard/page.js
+// FILE: src/app/tutor/dashboard/page.js (DARK MODE SUPPORT)
 // ============================================
 'use client';
 
@@ -91,10 +91,11 @@ export default function TutorDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      // Updated: Dark mode for loading screen
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar />
         <div className="container mx-auto px-4 py-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard...</p>
+          <p className="text-xl text-gray-700 dark:text-gray-300">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -102,12 +103,13 @@ export default function TutorDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center text-red-600">
+      // Updated: Dark mode for error screen
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-red-600 dark:text-red-400">
           <p className="text-xl mb-4">{error}</p>
           <button
             onClick={fetchData}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Retry
           </button>
@@ -118,23 +120,26 @@ export default function TutorDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-red-600">Access denied. Please log in.</p>
+      // Updated: Dark mode for access denied
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-red-600 dark:text-red-400">Access denied. Please log in.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    // Updated: Page background for dark mode
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col">
       <Navbar user={user} />
       
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <h1 className="text-3xl font-bold mb-6">Tutor Dashboard</h1>
+        {/* Updated: Header text for dark mode */}
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Tutor Dashboard</h1>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Updated: Colors and text for dark mode */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           {/* My Subjects */}
-          <div className="bg-blue-500 text-white p-6 rounded-lg shadow">
+          <div className="bg-blue-500 dark:bg-blue-600 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">My Subjects</h3>
             <br />
             <div className="text-lg mt-2 space-y-1">
@@ -145,19 +150,19 @@ export default function TutorDashboard() {
           </div>
 
           {/* Active Exams */}
-          <div className="bg-green-500 text-white p-6 rounded-lg shadow">
+          <div className="bg-green-500 dark:bg-green-600 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Active Exams</h3>
             <p className="text-4xl font-bold">{stats.activeExams}</p>
           </div>
 
           {/* Papers Uploaded */}
-          <div className="bg-orange-500 text-white p-6 rounded-lg shadow">
+          <div className="bg-orange-500 dark:bg-orange-600 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Papers Uploaded</h3>
             <p className="text-4xl font-bold">{stats.totalPapers}</p>
           </div>
 
           {/* Total Students */}
-          <div className="bg-purple-500 text-white p-6 rounded-lg shadow">
+          <div className="bg-purple-500 dark:bg-purple-600 text-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold mb-2">Total Students</h3>
             {Object.keys(stats.studentCounts || {}).length > 0 ? (
               <div className="text-lg space-y-1">
@@ -174,58 +179,58 @@ export default function TutorDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Updated: Card backgrounds and text for dark mode */}
         <div className="grid md:grid-cols-5 gap-6 mb-8">
-          <Link href="/tutor/marks" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-            <div className="text-blue-600 text-4xl mb-2">📝</div>
-            <h3 className="font-semibold text-lg">Enter Marks</h3>
-            <p className="text-gray-600 text-sm">Input student marks</p>
+          <Link href="/tutor/marks" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div className="text-blue-600 dark:text-blue-400 text-4xl mb-2">📝</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Enter Marks</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Input student marks</p>
           </Link>
-          <Link href="/tutor/papers" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-            <div className="text-green-600 text-4xl mb-2">📄</div>
-            <h3 className="font-semibold text-lg">Upload Papers</h3>
-            <p className="text-gray-600 text-sm">Upload question papers</p>
+          <Link href="/tutor/papers" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-green-500">
+            <div className="text-green-600 dark:text-green-400 text-4xl mb-2">📄</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Upload Papers</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Upload question papers</p>
           </Link>
-          <Link href="/tutor/analytics" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-            <div className="text-purple-600 text-4xl mb-2">📊</div>
-            <h3 className="font-semibold text-lg">View Analytics</h3>
-            <p className="text-gray-600 text-sm">Student performance</p>
+          <Link href="/tutor/analytics" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <div className="text-purple-600 dark:text-purple-400 text-4xl mb-2">📊</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">View Analytics</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Student performance</p>
           </Link>
-          <Link href="/tutor/add-students" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-            <div className="text-orange-600 text-4xl mb-2">➕</div>
-            <h3 className="font-semibold text-lg">Add Students</h3>
-            <p className="text-gray-600 text-sm">Enroll new students</p>
+          <Link href="/tutor/add-students" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-orange-500">
+            <div className="text-orange-600 dark:text-orange-400 text-4xl mb-2">➕</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Add Students</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Enroll new students</p>
           </Link>
-          <Link href="/tutor/remove-students" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-            <div className="text-red-600 text-4xl mb-2">➖</div>
-            <h3 className="font-semibold text-lg">Remove Students</h3>
-            <p className="text-gray-600 text-sm">Unenroll students</p>
+          <Link href="/tutor/remove-students" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-red-500">
+            <div className="text-red-600 dark:text-red-400 text-4xl mb-2">➖</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Remove Students</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Unenroll students</p>
           </Link>
         </div>
 
-        {/* Recent Active Admin Exams (Assigned to Tutor) */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Recent Active Exams</h2>
+        {/* Recent Active Admin Exams (Assigned to Tutor) - Updated: Card and text for dark mode */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Recent Active Exams</h2>
           {recentExams.length === 0 ? (
-            <p className="text-gray-500">No active exams assigned</p>
+            <p className="text-gray-500 dark:text-gray-400">No active exams assigned</p>
           ) : (
             <div className="space-y-3">
               {recentExams.map(exam => (
-                <div key={exam.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                  <h3 className="font-semibold">{exam.exam_name}</h3>
-                  <p className="text-sm text-gray-600">
+                <div key={exam.id} className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 py-2">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">{exam.exam_name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Date: {new Date(exam.exam_date).toLocaleDateString()} | 
                     Grade: {exam.grade_name}
                   </p>
                   <div className="text-sm mt-2 space-y-1">
                     {exam.student_count_per_subject && Object.entries(exam.student_count_per_subject).map(([subjectName, count]) => (
-                      <p key={subjectName}>• {subjectName}: {count} students</p>
+                      <p key={subjectName} className="text-gray-700 dark:text-gray-300">• {subjectName}: {count} students</p>
                     ))}
                   </div>
                   <div className="flex gap-2 mt-2">
                     <Link
                       href={`/tutor/marks?examId=${exam.id}`}
-                      className="text-blue-600 hover:underline text-sm"
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       Enter Marks →
                     </Link>
@@ -237,12 +242,12 @@ export default function TutorDashboard() {
         </div>
       </div>
 
-      {/* Change Password Button - Footer */}
-      <div className="bg-white border-t border-gray-200 p-4">
+      {/* Change Password Button - Footer - Updated: Background and button for dark mode */}
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
         <div className="container mx-auto flex justify-end">
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition text-sm font-semibold"
+            className="bg-gray-600 dark:bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600 transition text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
             🔒 Change Password
           </button>

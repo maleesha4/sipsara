@@ -1,4 +1,6 @@
-// src/app/tutor/add-students/AddStudentsClient.js
+// ============================================
+// FILE: src/app/tutor/add-students/AddStudentsClient.js (DARK MODE SUPPORT)
+// ============================================
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -123,41 +125,44 @@ export default function AddStudentsClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      // Updated: Dark mode for loading screen
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-lg text-gray-700 dark:text-gray-300">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    // Updated: Page background for dark mode
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar user={user} />
       <div className="container mx-auto px-4 py-8">
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          // Updated: Error alert for dark mode
+          <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-500 text-red-700 dark:text-red-300 rounded-md">
             {error}
           </div>
         )}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Add Students</h1>
-          <Link href="/tutor/dashboard" className="bg-blue-500 text-white px-4 py-2 rounded">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Add Students</h1>
+          <Link href="/tutor/dashboard" className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
             Back to Dashboard
           </Link>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Updated: Inputs/select/button for dark mode */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
           <input
             type="text"
             placeholder="Search by name..."
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
-            className="border rounded p-2 flex-1"
+            className="border border-gray-300 dark:border-gray-600 rounded p-2 flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-500"
           />
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
-            className="border rounded p-2"
+            className="border border-gray-300 dark:border-gray-600 rounded p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-500"
           >
             <option value="">All Grades</option>
             <option value="6">Grade 6</option>
@@ -170,30 +175,32 @@ export default function AddStudentsClient() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
+            className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Search
           </button>
         </div>
 
         {availableStudents.length === 0 ? (
-          <p className="text-gray-500">No available students found. Try adjusting filters.</p>
+          // Updated: No students message for dark mode
+          <p className="text-gray-500 dark:text-gray-400">No available students found. Try adjusting filters.</p>
         ) : (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-4 py-2 bg-gray-50 border-b">
-              <p className="text-sm text-gray-600">Found {availableStudents.length} students</p>
+          // Updated: List container for dark mode
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Found {availableStudents.length} students</p>
             </div>
-            <ul className="divide-y">
+            <ul className="divide-y divide-gray-200 dark:divide-gray-600">
               {availableStudents.map((student) => (
                 <li key={student.id} className="p-4 flex justify-between items-center">
-                  <div>
+                  <div className="text-gray-900 dark:text-gray-100">
                     <h3 className="font-semibold">{student.full_name}</h3>
-                    <p className="text-sm text-gray-600">{student.grade_name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{student.grade_name}</p>
                   </div>
                   <button
                     onClick={() => handleEnroll(student.id)}
                     disabled={loading}
-                    className="bg-green-500 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                    className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 hover:bg-green-600 dark:hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     Enroll
                   </button>
