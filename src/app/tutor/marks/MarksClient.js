@@ -1,5 +1,5 @@
 // ============================================
-// FILE: src/app/tutor/marks/MarksClient.js (DARK MODE SUPPORT)
+// FILE: src/app/tutor/marks/MarksClient.js (FIXED - Properly displays saved score 0)
 // ============================================
 'use client';
 
@@ -118,7 +118,6 @@ export default function MarksClient() {
       }
       const data = await res.json();
       setAvailableExams(data.exams || []);
-      // Removed auto-redirect to first exam to allow selection
     } catch (error) {
       console.error('Error fetching exams:', error);
       setError(error.message || 'Failed to load available exams');
@@ -192,7 +191,11 @@ export default function MarksClient() {
   };
 
   const handleBulkSave = async () => {
-    const unsavedWithPending = choices.filter(c => !c.score && pendingScores[c.choice_id] && pendingScores[c.choice_id].trim() !== '');
+    const unsavedWithPending = choices.filter(c => 
+      (c.score === null || c.score === undefined) && 
+      pendingScores[c.choice_id] && 
+      pendingScores[c.choice_id].trim() !== ''
+    );
     if (unsavedWithPending.length === 0) {
       setError('No pending entries to save');
       return;
@@ -252,7 +255,6 @@ export default function MarksClient() {
 
   if (loading && !examsLoaded) {
     return (
-      // Updated: Dark mode for loading screen
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8 text-center">
@@ -262,10 +264,8 @@ export default function MarksClient() {
     );
   }
 
-  // If no exam selected and no available exams, show message
   if (!examId && availableExams.length === 0) {
     return (
-      // Updated: Dark mode for no exams message
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
@@ -280,10 +280,8 @@ export default function MarksClient() {
     );
   }
 
-  // Show exam selection if no examId but exams available
   if (!examId) {
     return (
-      // Updated: Dark mode for exam selection
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
@@ -314,21 +312,22 @@ export default function MarksClient() {
     );
   }
 
-  const pendingUnsavedCount = choices.filter(c => !c.score && pendingScores[c.choice_id] && pendingScores[c.choice_id].trim() !== '').length;
+  const pendingUnsavedCount = choices.filter(c => 
+    (c.score === null || c.score === undefined) && 
+    pendingScores[c.choice_id] && 
+    pendingScores[c.choice_id].trim() !== ''
+  ).length;
 
   return (
-    // Updated: Page background for dark mode
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navbar user={user} />
       <div className="container mx-auto px-4 py-8">
         {error && (
-          // Updated: Error alert for dark mode
           <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-500 text-red-700 dark:text-red-300 rounded-md">
             {error}
           </div>
         )}
         {success && (
-          // Updated: Success alert for dark mode
           <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/20 border border-green-400 dark:border-green-500 text-green-700 dark:text-green-300 rounded-md">
             {success}
           </div>
@@ -337,13 +336,11 @@ export default function MarksClient() {
           <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-gray-100">Enter Marks</h1>
         </div>
 
-        {/* Row 1: Exam name + Select Exam button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
             <p className="text-gray-700 dark:text-gray-300">
               Exam: <span className="font-semibold text-gray-900 dark:text-gray-100">{activeExam.name}</span>
             </p>
-
             <Link
               href="/tutor/marks"
               className="bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded text-center w-40 hover:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -353,13 +350,11 @@ export default function MarksClient() {
           </div>
         )}
 
-        {/* Row 2: Exam date + Back button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
             <p className="text-gray-700 dark:text-gray-300">
               Date: {new Date(activeExam.date).toLocaleDateString()}
             </p>
-
             <Link
               href="/tutor/dashboard"
               className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded text-center w-40 hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -369,13 +364,11 @@ export default function MarksClient() {
           </div>
         )}
 
-        {/* Row 3: Grade + Refresh button */}
         {activeExam && (
           <div className="flex justify-between items-center mb-2">
             <p className="text-gray-700 dark:text-gray-300">
               Grade: {activeExam.grade_name}
             </p>
-
             <button
               onClick={() => fetchChoices(examId)}
               disabled={loading}
@@ -386,7 +379,6 @@ export default function MarksClient() {
           </div>
         )}
 
-        {/* Row 4: Total choices left only */}
         {activeExam && (
           <div className="mb-4">
             <p className="text-gray-700 dark:text-gray-300">
@@ -396,12 +388,10 @@ export default function MarksClient() {
         )}
 
         {choices.length === 0 ? (
-          // Updated: Empty choices message for dark mode
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center border border-gray-200 dark:border-gray-700">
             <p className="text-gray-500 dark:text-gray-400">No students have selected your subjects for this exam yet. Check with admin for registrations.</p>
           </div>
         ) : (
-          // Updated: Table container for dark mode
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto border border-gray-200 dark:border-gray-700">
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
@@ -416,11 +406,17 @@ export default function MarksClient() {
               <tbody>
                 {choices.map((choice) => {
                   const choiceId = choice.choice_id;
-                  const hasSavedScore = !!choice.score;
+                  // FIXED: Correctly detect saved scores including 0
+                  const hasSavedScore = choice.score !== null && choice.score !== undefined;
                   const isEditing = editingChoice === choiceId;
                   const pendingScoreStr = pendingScores[choiceId];
-                  const inputValue = pendingScoreStr !== undefined ? pendingScoreStr : (hasSavedScore ? choice.score.toString() : '');
-                  const isValidInput = !!inputValue && inputValue.trim() !== '' && !isNaN(parseInt(inputValue)) && parseInt(inputValue) >= 0 && parseInt(inputValue) <= 100;
+                  const inputValue = pendingScoreStr !== undefined 
+                    ? pendingScoreStr 
+                    : (hasSavedScore ? choice.score.toString() : '');
+                  const isValidInput = inputValue.trim() !== '' && 
+                    !isNaN(parseInt(inputValue)) && 
+                    parseInt(inputValue) >= 0 && 
+                    parseInt(inputValue) <= 100;
 
                   return (
                     <tr key={choiceId} className="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -441,7 +437,7 @@ export default function MarksClient() {
                             autoFocus={isEditing}
                           />
                         ) : (
-                          <span className="px-2 py-1 rounded bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
+                          <span className="px-3 py-1.5 rounded bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 font-semibold">
                             {choice.score}
                           </span>
                         )}
