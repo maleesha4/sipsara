@@ -1,5 +1,6 @@
 // ============================================
-// FILE: src/app/admin/reports/grade-distribution/page.js (UPDATED - Add pie charts for each subject)
+// FILE: src/app/admin/reports/grade-distribution/page.js
+// FULL VERSION WITH "Students with exactly 0 marks" BADGE
 // ============================================
 'use client';
 
@@ -17,6 +18,7 @@ export default function GradeDistributionReport() {
   const [selectedExam, setSelectedExam] = useState(null);
   const [distributionData, setDistributionData] = useState([]);
   const [subjectDistribution, setSubjectDistribution] = useState({});
+  const [zeroCounts, setZeroCounts] = useState({}); // ← Stores exact 0s per subject
   const [topCombinations, setTopCombinations] = useState([]);
   const [selectedCombination, setSelectedCombination] = useState(null);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -35,7 +37,7 @@ export default function GradeDistributionReport() {
       return;
     }
     fetchExams();
-  }, []);
+  }, [router]);
 
   const fetchExams = async () => {
     try {
@@ -44,9 +46,7 @@ export default function GradeDistributionReport() {
         headers: getAuthHeaders(),
         credentials: 'same-origin'
       });
-      if (!res.ok) {
-        throw new Error('Failed to fetch exams');
-      }
+      if (!res.ok) throw new Error('Failed to fetch exams');
       const data = await res.json();
       setExams(data.exams || []);
     } catch (err) {
@@ -66,12 +66,12 @@ export default function GradeDistributionReport() {
         headers: getAuthHeaders(),
         credentials: 'same-origin'
       });
-      if (!res.ok) {
-        throw new Error('Failed to fetch distribution data');
-      }
+      if (!res.ok) throw new Error('Failed to fetch distribution data');
       const data = await res.json();
+
       setDistributionData(data.distribution || []);
       setSubjectDistribution(data.subjectDistribution || {});
+      setZeroCounts(data.zeroCounts || {}); // ← Receive exact 0 counts
       setTopCombinations(data.topCombinations || []);
       setTotalStudents(data.total || 0);
     } catch (err) {
@@ -91,9 +91,9 @@ export default function GradeDistributionReport() {
       return;
     }
     const header = 'Grade,Number of Students,Percentage (%)\n';
-    const rows = distributionData.map(grade =>
-      `"${grade.grade}",${grade.count},${grade.percentage}`
-    ).join('\n');
+    const rows = distributionData
+      .map((grade) => `"${grade.grade}",${grade.count},${grade.percentage}`)
+      .join('\n');
     const csv = header + rows;
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -101,6 +101,7 @@ export default function GradeDistributionReport() {
     a.href = url;
     a.download = `${selectedExam.exam_name}_grade_distribution.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const sortedGradesOrder = ['A', 'B', 'C', 'S', 'W'];
@@ -113,19 +114,17 @@ export default function GradeDistributionReport() {
     W: { bg: 'rgba(255, 99, 132, 0.8)', border: 'rgba(255, 99, 132, 1)' },
   };
 
-  // Sort distributionData for consistent ordering
-  const sortedDistribution = [...distributionData].sort((a, b) =>
-    sortedGradesOrder.indexOf(a.grade) - sortedGradesOrder.indexOf(b.grade)
+  const sortedDistribution = [...distributionData].sort(
+    (a, b) => sortedGradesOrder.indexOf(a.grade) - sortedGradesOrder.indexOf(b.grade)
   );
 
-  // Pie chart data for overall grades
   const pieData = {
-    labels: sortedDistribution.map(d => d.grade),
+    labels: sortedDistribution.map((d) => d.grade),
     datasets: [
       {
-        data: sortedDistribution.map(d => d.count),
-        backgroundColor: sortedDistribution.map(d => gradeColors[d.grade].bg),
-        borderColor: sortedDistribution.map(d => gradeColors[d.grade].border),
+        data: sortedDistribution.map((d) => d.count),
+        backgroundColor: sortedDistribution.map((d) => gradeColors[d.grade].bg),
+        borderColor: sortedDistribution.map((d) => gradeColors[d.grade].border),
         borderWidth: 1,
       },
     ],
@@ -134,12 +133,10 @@ export default function GradeDistributionReport() {
   const pieOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top',
-      },
+      legend: { position: 'top' },
       title: {
         display: true,
-        text: `Overall Grade Distribution for ${selectedExam?.exam_name}`,
+        text: `Overall Grade Distribution for ${selectedExam?.exam_name || ''}`,
       },
     },
   };
@@ -148,7 +145,7 @@ export default function GradeDistributionReport() {
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
-          <p className="text-lg">Loading...</p>
+          <p className="text-lg">Loading exams...</p>
         </div>
       </div>
     );
@@ -176,35 +173,46 @@ export default function GradeDistributionReport() {
             )}
           </div>
         </div>
+
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
             {error}
           </div>
         )}
+
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-bold mb-4">Select Exam</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exams.map(exam => (
-              <button
-                key={exam.id}
-                onClick={() => handleExamSelect(exam)}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  selectedExam?.id === exam.id
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <h3 className="font-semibold text-gray-800">{exam.exam_name}</h3>
-                <p className="text-sm text-gray-600">{exam.grade_name} | {new Date(exam.exam_date).toLocaleDateString()}</p>
-              </button>
-            ))}
-          </div>
+          {exams.length === 0 ? (
+            <p className="text-gray-500">No exams found</p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {exams.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => handleExamSelect(exam)}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    selectedExam?.id === exam.id
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <h3 className="font-semibold text-gray-800">{exam.exam_name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {exam.grade_name} | {new Date(exam.exam_date).toLocaleDateString()}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
         {selectedExam && (
           <div className="space-y-6">
-            {/* Overall Distribution with Pie Chart */}
+            {/* Overall Distribution */}
             <div className="bg-white rounded-lg shadow">
-              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">Overall Grade Distribution</h3>
+              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">
+                Overall Grade Distribution
+              </h3>
               {loading ? (
                 <div className="p-12 text-center">
                   <p className="text-gray-500">Loading...</p>
@@ -241,9 +249,12 @@ export default function GradeDistributionReport() {
                 </div>
               )}
             </div>
-            {/* Subject-wise Distribution */}
+
+            {/* Subject-wise Distribution WITH 0 MARKS BADGE */}
             <div className="bg-white rounded-lg shadow">
-              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">Subject-wise Grade Percentages</h3>
+              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">
+                Subject-wise Grade Percentages
+              </h3>
               {Object.keys(subjectDistribution).length === 0 ? (
                 <div className="p-12 text-center">
                   <p className="text-gray-500">No subject data</p>
@@ -251,37 +262,38 @@ export default function GradeDistributionReport() {
               ) : (
                 <div className="p-6 space-y-8">
                   {Object.entries(subjectDistribution).map(([subject, grades]) => {
-                    const sortedGrades = Object.entries(grades).sort(([g1], [g2]) => 
-                      sortedGradesOrder.indexOf(g1) - sortedGradesOrder.indexOf(g2)
+                    const sortedGrades = Object.entries(grades).sort(
+                      ([g1], [g2]) => sortedGradesOrder.indexOf(g1) - sortedGradesOrder.indexOf(g2)
                     );
-                    const subjectLabels = sortedGrades.map(([g]) => g);
-                    const subjectData = sortedGrades.map(([, c]) => c);
+
                     const subjectPieData = {
-                      labels: subjectLabels,
-                      datasets: [
-                        {
-                          data: subjectData,
-                          backgroundColor: subjectLabels.map(l => gradeColors[l].bg),
-                          borderColor: subjectLabels.map(l => gradeColors[l].border),
-                          borderWidth: 1,
-                        },
-                      ],
+                      labels: sortedGrades.map(([g]) => g),
+                      datasets: [{
+                        data: sortedGrades.map(([, c]) => c),
+                        backgroundColor: sortedGrades.map(([g]) => gradeColors[g].bg),
+                        borderColor: sortedGrades.map(([g]) => gradeColors[g].border),
+                        borderWidth: 1,
+                      }],
                     };
+
                     const subjectPieOptions = {
                       responsive: true,
                       plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        title: {
-                          display: true,
-                          text: `Grade Distribution for ${subject}`,
-                        },
+                        legend: { position: 'top' },
+                        title: { display: true, text: `Grade Distribution for ${subject}` },
                       },
                     };
+
+                    const zeroCount = zeroCounts[subject] || 0;
+
                     return (
-                      <div key={subject} className="mb-6 border-b pb-6">
-                        <h4 className="font-semibold text-gray-800 mb-4 text-lg">{subject}</h4>
+                      <div key={subject} className="mb-6 border-b pb-6 last:border-0">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-semibold text-gray-800 text-lg">{subject}</h4>
+                          <span className="text-sm font-bold text-red-700 bg-red-100 px-4 py-2 rounded-full">
+                            Students with exactly 0 marks: {zeroCount}
+                          </span>
+                        </div>
                         <div className="grid md:grid-cols-2 gap-6">
                           <div className="h-64">
                             <Pie data={subjectPieData} options={subjectPieOptions} />
@@ -300,7 +312,9 @@ export default function GradeDistributionReport() {
                                   <tr key={grade} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                     <td className="px-4 py-2 font-medium text-gray-900">{grade}</td>
                                     <td className="px-4 py-2 text-center text-gray-700">{count}</td>
-                                    <td className="px-4 py-2 text-center text-gray-700">{((count / totalStudents) * 100).toFixed(2)}</td>
+                                    <td className="px-4 py-2 text-center text-gray-700">
+                                      {((count / totalStudents) * 100).toFixed(2)}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -313,9 +327,12 @@ export default function GradeDistributionReport() {
                 </div>
               )}
             </div>
+
             {/* Grade Combinations */}
             <div className="bg-white rounded-lg shadow">
-              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">Grade Combinations (e.g., A:3, B:2, S:1)</h3>
+              <h3 className="p-6 text-lg font-bold text-gray-800 border-b">
+                Grade Combinations (e.g., A:2, W:1)
+              </h3>
               {topCombinations.length === 0 ? (
                 <div className="p-12 text-center">
                   <p className="text-gray-500">No combinations data</p>
@@ -331,8 +348,8 @@ export default function GradeDistributionReport() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {topCombinations.map((combo, idx) => (
-                        <tr 
-                          key={idx} 
+                        <tr
+                          key={idx}
                           className={`cursor-pointer hover:bg-gray-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                           onClick={() => handleCombinationSelect(combo.combination)}
                         >
@@ -342,18 +359,21 @@ export default function GradeDistributionReport() {
                       ))}
                     </tbody>
                   </table>
+
                   {selectedCombination && (
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center mb-4">
                         <h4 className="font-bold text-gray-800">Students with {selectedCombination}:</h4>
-                        <button 
+                        <button
                           onClick={() => setSelectedCombination(null)}
                           className="text-blue-500 hover:text-blue-700 font-semibold"
                         >
                           Close
                         </button>
                       </div>
-                      <p className="mb-4 text-gray-600">Total: {topCombinations.find(c => c.combination === selectedCombination)?.count}</p>
+                      <p className="mb-4 text-gray-600">
+                        Total: {topCombinations.find(c => c.combination === selectedCombination)?.count}
+                      </p>
                       <ul className="list-disc pl-5 max-h-60 overflow-y-auto space-y-1">
                         {topCombinations.find(c => c.combination === selectedCombination)?.students.map((name, idx) => (
                           <li key={idx} className="text-sm text-gray-700">{name}</li>
