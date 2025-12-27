@@ -1,5 +1,5 @@
 // ============================================
-// FILE: app/api/tutor/marks/route.js (FIXED - Filters by exam correctly)
+// FILE: app/api/tutor/marks/route.js
 // ============================================
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -102,15 +102,24 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { choiceId, score } = body;
+    const { choiceId, score: rawScore } = body;
 
-    if (!choiceId || score === undefined || score < 0 || score > 100) {
-      return NextResponse.json({ error: 'Invalid input: choiceId and score (0-100) required' }, { status: 400 });
+    // Basic presence check
+    if (!choiceId || rawScore === undefined || rawScore === null || rawScore === '') {
+      return NextResponse.json({ error: 'Invalid input: choiceId and score are required' }, { status: 400 });
     }
 
-    const parsedScore = parseInt(score);
+    // Parse score safely
+    const parsedScore = parseInt(rawScore, 10);
+
+    // Check if parsing resulted in a valid number
     if (isNaN(parsedScore)) {
       return NextResponse.json({ error: 'Score must be a valid number' }, { status: 400 });
+    }
+
+    // Validate range: 0 to 100 inclusive
+    if (parsedScore < 0 || parsedScore > 100) {
+      return NextResponse.json({ error: 'Score must be between 0 and 100 inclusive' }, { status: 400 });
     }
 
     // Get tutor ID
@@ -125,7 +134,7 @@ export async function POST(req) {
 
     const tutorId = tutorResult.rows[0].id;
 
-    // Verify tutor assigned to this choice's exam/subject before saving
+    // Verify tutor is assigned to this choice's exam/subject
     const assignmentCheck = await query(`
       SELECT 1 
       FROM admin_exam_student_choices aesc
@@ -140,7 +149,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Not assigned to this exam/subject' }, { status: 403 });
     }
 
-    // Upsert mark
+    // Upsert the mark (now safely allows 0)
     await query(`
       INSERT INTO admin_exam_marks (choice_id, tutor_id, score)
       VALUES ($1, $2, $3)
