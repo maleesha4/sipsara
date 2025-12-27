@@ -1,5 +1,6 @@
 // ============================================
-// FILE: app/api/admin/reports/grade-distribution/route.js (UPDATED - Fixed grade scale to A,B,C,S,W; fixed grouping and ordering for grades; fixed combination string_agg order)
+// FILE: app/api/admin/reports/grade-distribution/route.js
+// FINAL VERSION WITH EXACT 0 MARKS COUNT PER SUBJECT
 // ============================================
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -18,141 +19,187 @@ export async function GET(request) {
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
     const { searchParams } = new URL(request.url);
     const examId = parseInt(searchParams.get('examId'));
     if (!examId) {
       return NextResponse.json({ error: 'Exam ID required' }, { status: 400 });
     }
 
-    // Total students
+    // Total registered students
     const totalStudentsResult = await query(
-      'SELECT COUNT(*) as total FROM admin_exam_registrations WHERE admin_exam_id = $1 AND status IN (\'registered\', \'confirmed\')',
+      `SELECT COUNT(*) AS total 
+       FROM admin_exam_registrations 
+       WHERE admin_exam_id = $1 AND status IN ('registered', 'confirmed')`,
       [examId]
     );
     const total = parseInt(totalStudentsResult.rows[0].total);
 
-    // Overall grade distribution using CTE
-    const distributionResult = await query(`
-      WITH student_averages AS (
-        SELECT
-          aer.id as registration_id,
-          AVG(aem.score) as average
+    // Overall grade distribution (average-based)
+    const avgResult = await query(`
+      WITH marks AS (
+        SELECT aer.id AS registration_id,
+               COALESCE(aem.score, 0) AS score
         FROM admin_exam_registrations aer
         LEFT JOIN admin_exam_student_choices aesc ON aesc.registration_id = aer.id
         LEFT JOIN admin_exam_marks aem ON aem.choice_id = aesc.id
         WHERE aer.admin_exam_id = $1
           AND aer.status IN ('registered', 'confirmed')
-        GROUP BY aer.id
+      ),
+      student_stats AS (
+        SELECT registration_id,
+               AVG(score) AS average
+        FROM marks
+        GROUP BY registration_id
       )
-      SELECT
-        CASE
-          WHEN sa.average >= 90 THEN 'A'
-          WHEN sa.average >= 80 THEN 'B'
-          WHEN sa.average >= 70 THEN 'C'
-          WHEN sa.average >= 60 THEN 'S'
+      SELECT 
+        CASE 
+          WHEN average >= 75 THEN 'A'
+          WHEN average >= 65 THEN 'B'
+          WHEN average >= 50 THEN 'C'
+          WHEN average >= 35 THEN 'S'
           ELSE 'W'
-        END as grade,
-        COUNT(*) as count
-      FROM admin_exam_registrations aer
-      JOIN student_averages sa ON aer.id = sa.registration_id
-      WHERE aer.admin_exam_id = $1
-        AND aer.status IN ('registered', 'confirmed')
-        AND sa.average IS NOT NULL
-      GROUP BY CASE
-        WHEN sa.average >= 90 THEN 'A'
-        WHEN sa.average >= 80 THEN 'B'
-        WHEN sa.average >= 70 THEN 'C'
-        WHEN sa.average >= 60 THEN 'S'
-        ELSE 'W'
-      END
-      ORDER BY grade ASC
+        END AS grade,
+        COUNT(*) AS count
+      FROM student_stats
+      GROUP BY 
+        CASE 
+          WHEN average >= 75 THEN 'A'
+          WHEN average >= 65 THEN 'B'
+          WHEN average >= 50 THEN 'C'
+          WHEN average >= 35 THEN 'S'
+          ELSE 'W'
+        END
+      ORDER BY
+        CASE 
+          WHEN (CASE WHEN average >= 75 THEN 'A' WHEN average >= 65 THEN 'B' WHEN average >= 50 THEN 'C' WHEN average >= 35 THEN 'S' ELSE 'W' END) = 'A' THEN 1
+          WHEN (CASE WHEN average >= 75 THEN 'A' WHEN average >= 65 THEN 'B' WHEN average >= 50 THEN 'C' WHEN average >= 35 THEN 'S' ELSE 'W' END) = 'B' THEN 2
+          WHEN (CASE WHEN average >= 75 THEN 'A' WHEN average >= 65 THEN 'B' WHEN average >= 50 THEN 'C' WHEN average >= 35 THEN 'S' ELSE 'W' END) = 'C' THEN 3
+          WHEN (CASE WHEN average >= 75 THEN 'A' WHEN average >= 65 THEN 'B' WHEN average >= 50 THEN 'C' WHEN average >= 35 THEN 'S' ELSE 'W' END) = 'S' THEN 4
+          ELSE 5
+        END;
     `, [examId]);
-    const distribution = distributionResult.rows.map(row => ({
-      ...row,
-      percentage: ((row.count / total) * 100).toFixed(2)
+
+    const distribution = avgResult.rows.map(row => ({
+      grade: row.grade,
+      count: parseInt(row.count),
+      percentage: ((parseInt(row.count) / total) * 100).toFixed(2)
     }));
 
-    // Subject-wise grade distribution
-    const subjectGradesResult = await query(`
-      SELECT
-        s.name as subject_name,
-        CASE
-          WHEN aem.score >= 90 THEN 'A'
-          WHEN aem.score >= 80 THEN 'B'
-          WHEN aem.score >= 70 THEN 'C'
-          WHEN aem.score >= 60 THEN 'S'
+    // Subject-wise grade distribution (including absent as W)
+    const subjectResult = await query(`
+      SELECT 
+        s.name AS subject_name,
+        CASE 
+          WHEN COALESCE(aem.score, 0) >= 75 THEN 'A'
+          WHEN COALESCE(aem.score, 0) >= 65 THEN 'B'
+          WHEN COALESCE(aem.score, 0) >= 50 THEN 'C'
+          WHEN COALESCE(aem.score, 0) >= 35 THEN 'S'
           ELSE 'W'
-        END as grade,
-        COUNT(*) as count
-      FROM admin_exam_marks aem
-      JOIN admin_exam_student_choices aesc ON aem.choice_id = aesc.id
-      JOIN subjects s ON aesc.subject_id = s.id
-      JOIN admin_exam_registrations aer ON aesc.registration_id = aer.id
+        END AS grade,
+        COUNT(*) AS count
+      FROM admin_exam_registrations aer
+      CROSS JOIN subjects s
+      LEFT JOIN admin_exam_student_choices aesc 
+        ON aesc.registration_id = aer.id AND aesc.subject_id = s.id
+      LEFT JOIN admin_exam_marks aem ON aem.choice_id = aesc.id
       WHERE aer.admin_exam_id = $1
         AND aer.status IN ('registered', 'confirmed')
-        AND aem.score IS NOT NULL
-      GROUP BY s.name, CASE
-        WHEN aem.score >= 90 THEN 'A'
-        WHEN aem.score >= 80 THEN 'B'
-        WHEN aem.score >= 70 THEN 'C'
-        WHEN aem.score >= 60 THEN 'S'
-        ELSE 'W'
-      END
-      ORDER BY s.name, grade ASC
+      GROUP BY s.name,
+        CASE 
+          WHEN COALESCE(aem.score, 0) >= 75 THEN 'A'
+          WHEN COALESCE(aem.score, 0) >= 65 THEN 'B'
+          WHEN COALESCE(aem.score, 0) >= 50 THEN 'C'
+          WHEN COALESCE(aem.score, 0) >= 35 THEN 'S'
+          ELSE 'W'
+        END
+      ORDER BY s.name,
+        CASE 
+          WHEN (CASE WHEN COALESCE(aem.score, 0) >= 75 THEN 'A' WHEN COALESCE(aem.score, 0) >= 65 THEN 'B' WHEN COALESCE(aem.score, 0) >= 50 THEN 'C' WHEN COALESCE(aem.score, 0) >= 35 THEN 'S' ELSE 'W' END) = 'A' THEN 1
+          WHEN (CASE WHEN COALESCE(aem.score, 0) >= 75 THEN 'A' WHEN COALESCE(aem.score, 0) >= 65 THEN 'B' WHEN COALESCE(aem.score, 0) >= 50 THEN 'C' WHEN COALESCE(aem.score, 0) >= 35 THEN 'S' ELSE 'W' END) = 'B' THEN 2
+          WHEN (CASE WHEN COALESCE(aem.score, 0) >= 75 THEN 'A' WHEN COALESCE(aem.score, 0) >= 65 THEN 'B' WHEN COALESCE(aem.score, 0) >= 50 THEN 'C' WHEN COALESCE(aem.score, 0) >= 35 THEN 'S' ELSE 'W' END) = 'C' THEN 3
+          WHEN (CASE WHEN COALESCE(aem.score, 0) >= 75 THEN 'A' WHEN COALESCE(aem.score, 0) >= 65 THEN 'B' WHEN COALESCE(aem.score, 0) >= 50 THEN 'C' WHEN COALESCE(aem.score, 0) >= 35 THEN 'S' ELSE 'W' END) = 'S' THEN 4
+          ELSE 5
+        END;
     `, [examId]);
 
-    // Group by subject
     const subjectDistribution = {};
-    subjectGradesResult.rows.forEach(row => {
-      if (!subjectDistribution[row.subject_name]) {
-        subjectDistribution[row.subject_name] = {};
-      }
-      subjectDistribution[row.subject_name][row.grade] = row.count;
+    subjectResult.rows.forEach(row => {
+      const subj = row.subject_name;
+      if (!subjectDistribution[subj]) subjectDistribution[subj] = {};
+      subjectDistribution[subj][row.grade] = parseInt(row.count);
     });
 
-    // Grade combinations using CTE for per-student grade counts
-    const combinationsResult = await query(`
-      WITH student_grades AS (
-        SELECT
-          aer.id as registration_id,
-          u.full_name as student_name,
-          CASE
-            WHEN aem.score >= 90 THEN 'A'
-            WHEN aem.score >= 80 THEN 'B'
-            WHEN aem.score >= 70 THEN 'C'
-            WHEN aem.score >= 60 THEN 'S'
-            ELSE 'W'
-          END as grade
+    // NEW: Count students who scored EXACTLY 0 (not absent)
+    const zeroMarksResult = await query(`
+      SELECT 
+        s.name AS subject_name,
+        COUNT(*) AS zero_count
+      FROM admin_exam_registrations aer
+      CROSS JOIN subjects s
+      LEFT JOIN admin_exam_student_choices aesc 
+        ON aesc.registration_id = aer.id AND aesc.subject_id = s.id
+      LEFT JOIN admin_exam_marks aem ON aem.choice_id = aesc.id
+      WHERE aer.admin_exam_id = $1
+        AND aer.status IN ('registered', 'confirmed')
+        AND aem.score = 0  -- Only explicit zero marks
+      GROUP BY s.name;
+    `, [examId]);
+
+    const zeroCounts = {};
+    zeroMarksResult.rows.forEach(row => {
+      zeroCounts[row.subject_name] = parseInt(row.zero_count);
+    });
+
+    // Grade combinations
+    const comboResult = await query(`
+      WITH all_subjects AS (
+        SELECT aer.id AS registration_id,
+               u.full_name AS student_name,
+               COALESCE(aem.score, 0) AS score
         FROM admin_exam_registrations aer
-        JOIN students s ON aer.student_id = s.id
-        JOIN users u ON s.user_id = u.id
-        LEFT JOIN admin_exam_student_choices aesc ON aesc.registration_id = aer.id
+        JOIN students st ON aer.student_id = st.id
+        JOIN users u ON st.user_id = u.id
+        CROSS JOIN subjects s
+        LEFT JOIN admin_exam_student_choices aesc 
+          ON aesc.registration_id = aer.id AND aesc.subject_id = s.id
         LEFT JOIN admin_exam_marks aem ON aem.choice_id = aesc.id
         WHERE aer.admin_exam_id = $1
           AND aer.status IN ('registered', 'confirmed')
-          AND aem.score IS NOT NULL
       ),
       grade_counts AS (
-        SELECT
+        SELECT 
           registration_id,
           student_name,
-          grade,
-          COUNT(*) as count
-        FROM student_grades
+          CASE 
+            WHEN score >= 75 THEN 'A'
+            WHEN score >= 65 THEN 'B'
+            WHEN score >= 50 THEN 'C'
+            WHEN score >= 35 THEN 'S'
+            ELSE 'W'
+          END AS grade,
+          COUNT(*) AS cnt
+        FROM all_subjects
         GROUP BY registration_id, student_name, grade
       )
-      SELECT
+      SELECT 
         student_name,
-        string_agg(grade || ':' || count, ', ' ORDER BY grade ASC) as combination
+        string_agg(grade || ':' || cnt, ', ' ORDER BY 
+          CASE grade
+            WHEN 'A' THEN 1
+            WHEN 'B' THEN 2
+            WHEN 'C' THEN 3
+            WHEN 'S' THEN 4
+            WHEN 'W' THEN 5
+          END
+        ) AS combination
       FROM grade_counts
-      GROUP BY registration_id, student_name
-      ORDER BY student_name
+      GROUP BY registration_id, student_name;
     `, [examId]);
 
-    // Group by combination
     const combinations = {};
-    combinationsResult.rows.forEach(row => {
-      const key = row.combination;
+    comboResult.rows.forEach(row => {
+      const key = row.combination || '(no marks)';
       if (!combinations[key]) {
         combinations[key] = { count: 0, students: [] };
       }
@@ -160,17 +207,18 @@ export async function GET(request) {
       combinations[key].students.push(row.student_name);
     });
 
-    // Top combinations
     const topCombinations = Object.entries(combinations)
       .sort(([,a], [,b]) => b.count - a.count)
-      .slice(0, 10)
-      .map(([key, data]) => ({ combination: key, ...data }));
+      .slice(0, 15)
+      .map(([combination, data]) => ({ combination, ...data }));
 
+    // Return all data including zeroCounts
     return NextResponse.json({
       distribution,
       subjectDistribution,
       topCombinations,
-      total
+      total,
+      zeroCounts  // ← New data for frontend
     });
   } catch (error) {
     console.error('Error fetching grade distribution:', error);
