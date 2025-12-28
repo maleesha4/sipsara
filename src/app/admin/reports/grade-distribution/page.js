@@ -154,25 +154,46 @@ export default function GradeDistributionReport() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Grade Distribution Report</h1>
-          <div className="flex gap-4">
-            <Link
-              href="/admin/reports"
-              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold"
-            >
-              Back to Reports
-            </Link>
-            {selectedExam && (
-              <button
-                onClick={exportToCSV}
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold"
-              >
-                Export CSV
-              </button>
-            )}
-          </div>
-        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+  <h1 className="text-3xl font-bold text-gray-800">Grade Distribution Report</h1>
+  
+  <div className="flex flex-wrap gap-4">
+    {/* Back to Dashboard - NEW */}
+    <Link
+      href="/admin/dashboard"
+      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold shadow-md flex items-center gap-2"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      Back to Dashboard
+    </Link>
+
+    {/* Back to Reports */}
+    <Link
+      href="/admin/reports"
+      className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold flex items-center gap-2"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Back to Reports
+    </Link>
+
+    {/* Export CSV - only when exam selected */}
+    {selectedExam && (
+      <button
+        onClick={exportToCSV}
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold shadow-md flex items-center gap-2"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Export CSV
+      </button>
+    )}
+  </div>
+</div>
 
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">

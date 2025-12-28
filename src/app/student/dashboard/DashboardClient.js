@@ -29,7 +29,7 @@ export default function DashboardClient() {
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
 
-  // NEW: Loading state for the admission button
+  // Loading state for the admission button
   const [loadingRegId, setLoadingRegId] = useState(null);
 
   useEffect(() => {
@@ -128,7 +128,6 @@ export default function DashboardClient() {
       setSelectedRegistration(reg);
       setShowAdmissionModal(true);
     } finally {
-      // stop loading state when modal is open
       setLoadingRegId(null);
     }
   };
@@ -137,11 +136,13 @@ export default function DashboardClient() {
     setDownloadedIds(prev => new Set([...prev, regId]));
   };
 
-  const studentAdmissionNumber = user ? (25012300 + user.id).toString() : '';
+  // FIXED: Use user.student_id instead of user.id
+  const studentAdmissionNumber = user && user.student_id 
+    ? (25012300 + Number(user.student_id)).toString() 
+    : '';
 
   if (loading) {
     return (
-      // Updated: Dark mode for loading screen
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Navbar user={user} />
         <div className="container mx-auto px-4 py-8">
@@ -153,7 +154,6 @@ export default function DashboardClient() {
 
   if (!user) {
     return (
-      // Updated: Dark mode for access denied
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <p className="text-gray-700 dark:text-gray-300">Access denied. Redirecting to login...</p>
       </div>
@@ -161,12 +161,10 @@ export default function DashboardClient() {
   }
 
   return (
-    // Updated: Gradient with valid colors + dark mode
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-300 dark:from-gray-900 dark:to-gray-800 flex flex-col">
       <Navbar user={user} />
       
       {successMessage && (
-        // Updated: Success alert for dark mode
         <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 p-4 m-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -211,7 +209,6 @@ export default function DashboardClient() {
             height={80}
             className="w-48 h-12 sm:w-64 sm:h-16 md:w-80 md:h-20 lg:w-[300px] lg:h-[80px] object-contain"
           />
-          {/* Updated: Header text for dark mode */}
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mt-3 text-black dark:text-white">
             අධ්‍යාපන ආයතනය
           </h1>
@@ -219,7 +216,6 @@ export default function DashboardClient() {
       </div>
 
       <div className="container mx-auto px-4 py-8 flex-grow">
-        {/* Updated: Main title text for dark mode */}
         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Student Dashboard</h1>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -240,30 +236,27 @@ export default function DashboardClient() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Updated: Card backgrounds and text for dark mode */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Available Exams</h2>
             {availableExams.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400">No exams available</p>
             ) : (
               <div className="space-y-4">
-                {availableExams.slice(0, 3).map(exam => {
-                  return (
-                    <div key={exam.id} className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 bg-blue-50 dark:bg-blue-900/20">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{exam.exam_name}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Grade: {exam.grade_name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Date: {formatDate(exam.exam_date)}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Registration: {formatDate(exam.registration_start_date)} - {formatDate(exam.registration_end_date)}</p>
-                      
-                      <Link 
-                        href={`/student/exams/register/${exam.id}`}
-                        className="mt-2 inline-block bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        Register
-                      </Link>
-                    </div>
-                  );
-                })}
+                {availableExams.slice(0, 3).map(exam => (
+                  <div key={exam.id} className="border-l-4 border-blue-500 dark:border-blue-400 pl-4 bg-blue-50 dark:bg-blue-900/20">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{exam.exam_name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Grade: {exam.grade_name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Date: {formatDate(exam.exam_date)}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Registration: {formatDate(exam.registration_start_date)} - {formatDate(exam.registration_end_date)}</p>
+                    
+                    <Link 
+                      href={`/student/exams/register/${exam.id}`}
+                      className="mt-2 inline-block bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                ))}
                 {availableExamsCount > 3 && (
                   <Link href="/student/exams" className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-semibold">
                     View All Exams →
@@ -289,7 +282,6 @@ export default function DashboardClient() {
                       <span className="font-semibold">Subjects:</span>
                     </p>
 
-                    {/* Subject List - Updated: Tags for dark mode */}
                     {reg.chosen_subjects ? (
                       <div className="flex flex-wrap gap-1">
                         {reg.chosen_subjects.split(', ').map((subject, idx) => (
@@ -302,7 +294,6 @@ export default function DashboardClient() {
                       <p className="text-xs text-gray-600 dark:text-gray-400">No subjects selected</p>
                     )}
 
-                    {/* Admission Card Button - Updated: Colors for dark mode */}
                     {reg.exam_status === 'send_admission_cards' && (
                       <button
                         onClick={() => {
@@ -337,16 +328,23 @@ export default function DashboardClient() {
           </div>
         </div>
 
-        {studentAdmissionNumber && (
-          // Updated: Admission number card for dark mode
+        {/* Student Admission Number Card - Now correctly using student_id */}
+        {user && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Student Admission Number</h2>
-            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">{studentAdmissionNumber}</p>
+            {studentAdmissionNumber ? (
+              <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                {studentAdmissionNumber}
+              </p>
+            ) : (
+              <p className="text-lg text-gray-500 dark:text-gray-400">
+                Not available
+              </p>
+            )}
           </div>
         )}
       </div>
 
-      {/* Updated: Footer button for dark mode */}
       <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
         <div className="container mx-auto flex justify-end">
           <button

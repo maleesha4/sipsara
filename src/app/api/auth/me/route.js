@@ -8,26 +8,34 @@ export async function GET() {
   try {
     const headersList = await headers();
     const authHeader = headersList.get('Authorization');
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
+
     if (!decoded) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Single query - only fetch columns that exist
+    // FIXED: Use correct column name (most likely 'grade_name', not 'name')
+    // Also made the grades join optional and safe
     const result = await query(`
       SELECT 
-        u.id, 
-        u.email, 
-        u.role, 
-        u.full_name, 
+        u.id AS user_id,
+        u.email,
+        u.role,
+        u.full_name,
         u.phone,
-        u.profile_photo
+        u.profile_photo,
+        s.id AS student_id,
+        s.current_grade_id,
+        g.grade_name AS grade_name  -- ← Change this if your column is different
       FROM users u
+      LEFT JOIN students s ON s.user_id = u.id
+      LEFT JOIN grades g ON g.id = s.current_grade_id
       WHERE u.id = $1
       LIMIT 1
     `, [decoded.id]);
@@ -36,7 +44,19 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const user = result.rows[0];
+    const dbUser = result.rows[0];
+
+    const user = {
+      id: dbUser.user_id,
+      email: dbUser.email,
+      role: dbUser.role,
+      full_name: dbUser.full_name,
+      phone: dbUser.phone,
+      profile_photo: dbUser.profile_photo,
+      student_id: dbUser.student_id,           // ← This fixes admission number
+      current_grade_id: dbUser.current_grade_id,
+      grade_name: dbUser.grade_name            // Optional, nice to have
+    };
 
     return NextResponse.json({ user });
 
