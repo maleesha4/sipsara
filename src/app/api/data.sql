@@ -281,8 +281,9 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
     score INT CHECK (score >= 0),
     feedback TEXT,
     is_late BOOLEAN DEFAULT FALSE,  -- NEW: Track if submission is late
+    is_group BOOLEAN DEFAULT FALSE,  -- NEW: Track if submission is a group submission
     status VARCHAR(20) DEFAULT 'not_submitted' CHECK (status IN ('not_submitted', 'submitted', 'graded')),
-    UNIQUE(assignment_id, student_id)
+    CONSTRAINT unique_individual_submission UNIQUE (assignment_id, student_id) WHERE is_group = false
 );
 
 CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment ON assignment_submissions(assignment_id);

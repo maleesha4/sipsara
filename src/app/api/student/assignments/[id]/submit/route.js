@@ -140,27 +140,15 @@ export async function POST(request, { params: paramsPromise }) {
 
       await client.query(
         `UPDATE assignment_submissions 
-        SET status = 'submitted', submission_date = NOW() AT TIME ZONE 'UTC', is_late = $1
-        WHERE id = $2`,
-        [isLate, submissionId]
+        SET status = 'submitted', submission_date = NOW() AT TIME ZONE 'UTC', is_late = $1, is_group = $2
+        WHERE id = $3`,
+        [isLate, assignment.is_group, submissionId]
       );
 
-      // If this is a group assignment, add group members
+      // If this is a group assignment, add group members to the submission
       if (assignment.is_group && groupMembers.length > 0) {
         for (const memberId of groupMembers) {
-          // For group assignments, create/update submission records for all group members with the same status
-          const memberSubmissionRes = await client.query(
-            `INSERT INTO assignment_submissions (assignment_id, student_id, status, is_late)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (assignment_id, student_id) 
-            DO UPDATE SET status = $3, is_late = $4, submission_date = NOW() AT TIME ZONE 'UTC'
-            RETURNING id`,
-            [assignmentId, memberId, 'submitted', isLate]
-          );
-          
-          const memberSubmissionId = memberSubmissionRes.rows[0].id;
-          
-          // Link group member to the main submission
+          // Link group members to the main submission
           await client.query(
             `INSERT INTO assignment_group_members (submission_id, student_id)
             VALUES ($1, $2)
@@ -168,6 +156,14 @@ export async function POST(request, { params: paramsPromise }) {
             [submissionId, memberId]
           );
         }
+        
+        // Update submission to mark it as a group submission
+        await client.query(
+          `UPDATE assignment_submissions 
+          SET status = 'submitted', is_late = $1
+          WHERE id = $2`,
+          [isLate, submissionId]
+        );
       }
 
       await mkdir(UPLOAD_DIR, { recursive: true });

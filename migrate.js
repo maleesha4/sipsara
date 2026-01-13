@@ -11,6 +11,20 @@ async function runMigration() {
     `);
     console.log('✓ Added is_group column to assignments table');
     
+    // Drop old UNIQUE constraint if it exists and add filtered constraint
+    await pool.query(`
+      ALTER TABLE assignment_submissions
+      DROP CONSTRAINT IF EXISTS assignment_submissions_assignment_id_student_id_key;
+    `);
+    
+    // Add filtered UNIQUE constraint (allows group submissions)
+    await pool.query(`
+      ALTER TABLE assignment_submissions
+      ADD CONSTRAINT unique_individual_submission 
+      UNIQUE (assignment_id, student_id) WHERE is_group = false;
+    `);
+    console.log('✓ Updated assignment_submissions constraint for group submissions');
+    
     // Create assignment_group_members table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS assignment_group_members (
@@ -43,6 +57,7 @@ async function runMigration() {
     console.error(error);
     process.exit(1);
   }
+}
 }
 
 runMigration();
