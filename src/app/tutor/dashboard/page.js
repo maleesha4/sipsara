@@ -180,7 +180,7 @@ export default function TutorDashboard() {
         </div>
 
         {/* Quick Actions - Updated: Card backgrounds and text for dark mode */}
-        <div className="grid md:grid-cols-5 gap-6 mb-8">
+        <div className="grid md:grid-cols-6 gap-6 mb-8">
           <Link href="/tutor/marks" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-blue-500">
             <div className="text-blue-600 dark:text-blue-400 text-4xl mb-2">📝</div>
             <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Enter Marks</h3>
@@ -205,6 +205,11 @@ export default function TutorDashboard() {
             <div className="text-red-600 dark:text-red-400 text-4xl mb-2">➖</div>
             <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Remove Students</h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Unenroll students</p>
+          </Link>
+          <Link href="/tutor/assignments" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div className="text-indigo-600 dark:text-indigo-400 text-4xl mb-2">📋</div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Assignments</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Manage student assignments</p>
           </Link>
         </div>
 
