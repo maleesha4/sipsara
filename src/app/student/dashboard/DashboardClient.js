@@ -82,6 +82,7 @@ export default function DashboardClient() {
         const assignmentsData = await assignmentsRes.json();
         setAssignments(assignmentsData.assignments || []);
       }
+    } catch (error) {
       console.error('Error fetching data:', error);
       localStorage.removeItem('auth_token');
       router.push('/login?error=fetch_failed');
