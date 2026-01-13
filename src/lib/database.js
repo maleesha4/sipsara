@@ -8,6 +8,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // For Neon: Let URL handle SSL; no override needed
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
+  connectionTimeoutMillis: 30000, // 30 second timeout for acquiring connection
+  idleTimeoutMillis: 30000, // 30 second timeout for idle connections
+  statement_timeout: 30000, // 30 second timeout for queries
 });
 
 export async function query(text, params) {
