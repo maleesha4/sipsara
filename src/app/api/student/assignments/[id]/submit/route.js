@@ -41,7 +41,14 @@ export async function POST(request, { params: paramsPromise }) {
       return new Response(JSON.stringify({ message: 'No files provided' }), { status: 400 });
     }
 
-    const client = await pool.connect();
+    let client;
+    try {
+      client = await pool.connect();
+    } catch (error) {
+      console.error('Database connection timeout:', error);
+      return new Response(JSON.stringify({ message: 'Database connection timeout. Please try again.' }), { status: 503 });
+    }
+
     try {
       const studentRes = await client.query(
         'SELECT id FROM students WHERE user_id = $1',
@@ -205,6 +212,12 @@ export async function POST(request, { params: paramsPromise }) {
     }
   } catch (error) {
     console.error('Error in submit route:', error);
+    
+    // Handle timeout errors specifically
+    if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      return new Response(JSON.stringify({ message: 'Request timeout. Please try again.' }), { status: 504 });
+    }
+    
     return new Response(JSON.stringify({ message: 'Internal server error' }), { status: 500 });
   }
 }
