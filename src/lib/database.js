@@ -8,8 +8,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // For Neon: Let URL handle SSL; no override needed
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
-  connectionTimeoutMillis: 30000, // 30 second timeout for acquiring connection
-  idleTimeoutMillis: 30000, // 30 second timeout for idle connections
+  connectionTimeoutMillis: 10000, // 10 second timeout for acquiring connection
+  idleTimeoutMillis: 240000, // 4 minutes (before Neon's 5 minute idle timeout)
+  max: 20, // Max pool size
   statement_timeout: 30000, // 30 second timeout for queries
 });
 

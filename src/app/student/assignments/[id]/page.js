@@ -19,7 +19,7 @@ const formatDeadline = (assignment) => {
     const [hours, minutes, seconds] = assignment.closing_time.split(':');
     
     // Create a date object representing the local date/time (not UTC)
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds || 0));
     
     return date.toLocaleString();
   } catch (e) {
@@ -53,7 +53,7 @@ const parseDeadline = (assignment) => {
     const [year, month, day] = dateStr.split('-');
     const [hours, minutes, seconds] = closingTime.split(':');
     
-    const dt = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
+    const dt = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds || 0));
     
     console.log('Parsed date/time:', dt);
     
@@ -167,7 +167,7 @@ export default function AssignmentDetailPage() {
     }
 
     // For group assignments, require at least one group member
-    if (assignment.is_group && selectedGroupMembers.length === 0) {
+    if (assignment?.is_group && selectedGroupMembers.length === 0) {
       setFileError('This is a group assignment. Please select at least one group member to submit with.');
       return;
     }
@@ -181,7 +181,7 @@ export default function AssignmentDetailPage() {
         formData.append('files', file);
       });
       
-      if (assignment.is_group && selectedGroupMembers.length > 0) {
+      if (assignment?.is_group && selectedGroupMembers.length > 0) {
         formData.append('groupMembers', JSON.stringify(selectedGroupMembers));
       }
 

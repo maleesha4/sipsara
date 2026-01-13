@@ -280,16 +280,15 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
     submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     score INT CHECK (score >= 0),
     feedback TEXT,
-    is_late BOOLEAN DEFAULT FALSE,  -- NEW: Track if submission is late
-    is_group BOOLEAN DEFAULT FALSE,  -- NEW: Track if submission is a group submission
+    is_late BOOLEAN DEFAULT FALSE,
+    is_group BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'not_submitted' CHECK (status IN ('not_submitted', 'submitted', 'graded')),
-    CONSTRAINT unique_individual_submission UNIQUE (assignment_id, student_id) WHERE is_group = false
+    CONSTRAINT unique_individual_submission UNIQUE (assignment_id, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment ON assignment_submissions(assignment_id);
-CREATE INDEX IF NOT EXISTS idx_assignment_submissions_student ON assignment_submissions(student_id);
-CREATE INDEX IF NOT EXISTS idx_assignment_submissions_status ON assignment_submissions(status);
-CREATE INDEX IF NOT EXISTS idx_assignment_submissions_is_late ON assignment_submissions(is_late);
+CREATE UNIQUE INDEX idx_unique_individual_submission
+ON assignment_submissions (assignment_id, student_id)
+WHERE is_group = false;
 
 -- Assignment Submission Files Table
 CREATE TABLE IF NOT EXISTS assignment_submission_files (
