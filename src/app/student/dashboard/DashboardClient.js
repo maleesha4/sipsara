@@ -21,6 +21,7 @@ export default function DashboardClient() {
   const [user, setUser] = useState(null);
   const [exams, setExams] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [downloadedIds, setDownloadedIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
@@ -76,7 +77,11 @@ export default function DashboardClient() {
         setRegistrations(regsData.registrations || []);
       }
 
-    } catch (error) {
+      const assignmentsRes = await fetch('/api/student/assignments', { headers: getAuthHeaders() });
+      if (assignmentsRes.ok) {
+        const assignmentsData = await assignmentsRes.json();
+        setAssignments(assignmentsData.assignments || []);
+      }
       console.error('Error fetching data:', error);
       localStorage.removeItem('auth_token');
       router.push('/login?error=fetch_failed');
@@ -96,6 +101,21 @@ export default function DashboardClient() {
   });
 
   const availableExamsCount = availableExams.length;
+
+  // Filter assignments not yet submitted, including those within 24-hour late submission window
+  const pendingAssignments = assignments.filter(assignment => {
+    const closingDateTime = new Date(`${assignment.due_date}T${assignment.closing_time}`);
+    const isOverdue = new Date() > closingDateTime;
+    const isSubmitted = assignment.submission_status === 'submitted' || assignment.submission_status === 'graded';
+    
+    // Allow late submission within 24 hours after deadline
+    const lateSubmissionWindow = new Date(closingDateTime.getTime() + 24 * 60 * 60 * 1000);
+    const withinLateSubmission = new Date() <= lateSubmissionWindow;
+    
+    return !isSubmitted && (!isOverdue || withinLateSubmission);
+  });
+
+  const hasPendingAssignments = pendingAssignments.length > 0;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -230,8 +250,20 @@ export default function DashboardClient() {
           </Link>
           
           <Link href="/student/results" className="bg-purple-500 dark:bg-purple-600 text-white p-6 rounded-lg hover:bg-purple-600 dark:hover:bg-purple-700 transition focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <h3 className="text-xl font-bold mb-2">Results</h3>
+            <h3 className="text-xl font-bold mb-2">Exam Results</h3>
             <p className="text-3xl">View</p>
+          </Link>
+
+          {hasPendingAssignments && (
+            <Link href="/student/assignments" className="bg-orange-500 dark:bg-orange-600 text-white p-6 rounded-lg hover:bg-orange-600 dark:hover:bg-orange-700 transition focus:outline-none focus:ring-2 focus:ring-orange-500">
+              <h3 className="text-xl font-bold mb-2">📝 My Assignments</h3>
+              <p className="text-sm">View & submit work</p>
+            </Link>
+          )}
+
+          <Link href="/student/marks" className="bg-indigo-500 dark:bg-indigo-600 text-white p-6 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <h3 className="text-xl font-bold mb-2">📊 View Assignment Marks</h3>
+            <p className="text-sm">Your grades & feedback</p>
           </Link>
         </div>
 

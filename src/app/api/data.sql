@@ -234,3 +234,82 @@ LEFT JOIN admin_exam_registrations aer ON ae.id = aer.admin_exam_id
 LEFT JOIN admin_exam_student_choices aesc ON aer.id = aesc.registration_id
 LEFT JOIN admin_exam_marks aem ON aesc.id = aem.choice_id
 GROUP BY ae.id;
+
+/*
+UPDATE students
+SET current_grade_id = g2.id
+FROM grades g1
+JOIN grades g2 ON g2.year = LEAST(g1.year + 1, (SELECT MAX(year) FROM grades))
+WHERE students.current_grade_id = g1.id;
+*/
+
+-- Assignments Table (supports multiple grades)
+CREATE TABLE IF NOT EXISTS assignments (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tutor_id INT NOT NULL REFERENCES tutors(id) ON DELETE CASCADE,
+    subject_id INT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    due_date DATE NOT NULL,
+    closing_time TIME NOT NULL,  -- Time when submissions close
+    max_score INT DEFAULT 100,
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'closed', 'archived')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Assignment Grades (junction table - assignments can target multiple grades)
+CREATE TABLE IF NOT EXISTS assignment_grades (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    assignment_id INT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    grade_id INT NOT NULL REFERENCES grades(id) ON DELETE CASCADE,
+    UNIQUE(assignment_id, grade_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignment_grades_assignment ON assignment_grades(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_grades_grade ON assignment_grades(grade_id);
+
+CREATE INDEX IF NOT EXISTS idx_assignments_tutor_subject ON assignments(tutor_id, subject_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_due_date ON assignments(due_date, closing_time);
+
+-- Assignment Submissions Table (UPDATED)
+CREATE TABLE IF NOT EXISTS assignment_submissions (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    assignment_id INT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    score INT CHECK (score >= 0),
+    feedback TEXT,
+    is_late BOOLEAN DEFAULT FALSE,  -- NEW: Track if submission is late
+    status VARCHAR(20) DEFAULT 'not_submitted' CHECK (status IN ('not_submitted', 'submitted', 'graded')),
+    UNIQUE(assignment_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment ON assignment_submissions(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_student ON assignment_submissions(student_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_status ON assignment_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_is_late ON assignment_submissions(is_late);
+
+-- Assignment Submission Files Table
+CREATE TABLE IF NOT EXISTS assignment_submission_files (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    submission_id INT NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignment_submission_files_submission ON assignment_submission_files(submission_id);
+
+-- Assignment Group Members Table (for group assignments)
+CREATE TABLE IF NOT EXISTS assignment_group_members (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    submission_id INT NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    UNIQUE(submission_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignment_group_members_submission ON assignment_group_members(submission_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_group_members_student ON assignment_group_members(student_id);
+
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS is_group BOOLEAN DEFAULT FALSE;
